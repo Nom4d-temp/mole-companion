@@ -1,7 +1,7 @@
--- Mole Companion v0.3.4 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.5 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.4'
+local VERSION='0.3.5'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -322,8 +322,8 @@ local function display(target,isMonitor)
     else rows={'No turtles yet','companion pair','on the computer'} end
     if confirmReturn then rows={'Return turtle?','Y=yes on PC','Esc=cancel'} end
     for y=1,math.min(height-1,#rows) do line(target,y,rows[y],width) end
-    line(target,height,'[<][>][R][P]',width)
-    if isMonitor then hits={prev={1,3,height},next={4,6,height},returnHome={7,9,height},pair={10,12,height}} end
+    line(target,height,'[<][>][R]',width)
+    if isMonitor then hits={prev={1,3,height},next={4,6,height},returnHome={7,9,height}} end
     return
   end
   local t=selected();local rows={demo and 'MOLE COMPANION - DEMO' or 'MOLE COMPANION'}
@@ -381,9 +381,9 @@ local function display(target,isMonitor)
   local notice=note
   if returnNotice and t and t.id==returnNotice.turtle and t.command and t.command.id==returnNotice.request then notice=M.returnNotice(t.command) end
   line(target,height-2,confirmReturn and 'Return selected turtle? Y=yes Esc=no' or notice,width)
-  line(target,height-1,'[Prev] [Next] [Return] [Pair]',width)
+  line(target,height-1,'[Prev] [Next] [Return]',width)
   line(target,height,'D: blocks L: log Up/Down: scroll Q: exit',width)
-  if isMonitor then hits={prev={1,6,height-1},next={8,13,height-1},returnHome={15,22,height-1},pair={24,29,height-1}} end
+  if isMonitor then hits={prev={1,6,height-1},next={8,13,height-1},returnHome={15,22,height-1}} end
 end
 local function render()
   local ok=peripheral.isPresent(monitorName) and pcall(display,monitor,true)

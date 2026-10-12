@@ -153,7 +153,7 @@ check('single-block monitor scales down and shows turtle telemetry',function()
    assert(rows[3]=='Mining','Small monitor missing turtle state')
    assert(rows[4]:find('Y 18 D 46',1,true),'Small monitor missing Y/depth')
    assert(rows[5]=='Fuel 1450','Small monitor missing fuel')
-   assert(rows[10]=='[<][>][R][P]','Compact buttons missing')
+   assert(rows[10]=='[<][>][R]','Compact buttons missing')
    return {'char','q'}
  end},true,nil,nil,true)
  assert(not table.concat(r.rows,'\n'):find('Monitor too small',1,true))

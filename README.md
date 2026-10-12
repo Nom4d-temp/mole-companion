@@ -1,4 +1,4 @@
-# Mole Companion 0.3.4
+# Mole Companion 0.3.5
 
 **Keep an eye on your Moles from one place.** Mole Companion turns a CC:Tweaked computer and monitor into a station for watching multiple mining turtles. Choose a turtle to see its status, recent Mole output, and unfamiliar blocks it has mined, or ask it to return home.
 
@@ -59,7 +59,7 @@ The companion does not automatically replace the computer's startup file. If you
 | Escape | Cancel pairing or a return confirmation |
 | Q | Close the companion; turtles keep working |
 
-Advanced monitors have **Prev**, **Next**, **Return**, and **Pair** buttons. Confirm returns with Y on the computer. A normal monitor uses the computer's keyboard controls.
+Advanced monitors have **Prev**, **Next**, and **Return** buttons. Confirm returns with Y on the computer. A normal monitor uses the computer's keyboard controls.
 
 The monitor automatically uses the smallest text scale (0.5). A compact layout shows status on small monitors, while larger monitors show more detail and logs. The screen adapts to its size. If it is too small, add monitor blocks. Computer controls remain available if the monitor is detached. Reattach the same monitor/modem to reconnect; restart the companion to select equipment with a different peripheral name.
 
