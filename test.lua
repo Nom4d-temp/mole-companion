@@ -34,15 +34,16 @@ check('control characters sanitized',function() assert(M.wrap('a\nb',39)[1]=='a 
 print('PASS: '..tests..' companion protocol/state tests')
 
 -- Full application smoke tests: no Minecraft required. Render on 39x12 surfaces.
-local function application(events,demo,hardwareNames,command)
+local function application(events,demo,hardwareNames,command,smallMonitor)
   local env=setmetatable({},{__index=_G});local files={};local saved={};local writes=0;local redraws=0;local timer=0;local packets={}
-  local function surface()
+  local function surface(small)
+    local w,h=small and 7 or 39,small and 5 or 12
     local rows={};local y=1
-    return {getSize=function() return 39,12 end,clear=function() redraws=redraws+1;rows={} end,
-      setCursorPos=function(x,row) assert(x==1 and row>=1 and row<=12);y=row end,
-      write=function(v) assert(#v<=39,'Screen overflow');rows[y]=v end},function() return rows end
+    return {getSize=function() return w,h end,setTextScale=function(n) assert(n==0.5);if small then w,h=15,10 end end,clear=function() redraws=redraws+1;rows={} end,
+      setCursorPos=function(x,row) assert(x==1 and row>=1 and row<=h);y=row end,
+      write=function(v) assert(#v<=w,'Screen overflow');rows[y]=v end},function() return rows end
   end
-  local terminal=surface();local monitor,getRows=surface();local present=true
+  local terminal=surface();local monitor,getRows=surface(smallMonitor);local present=true
   env.term=terminal
   env.fs={exists=function(p) return files[p]~=nil end,makeDir=function() end,delete=function(p) files[p]=nil end,
     move=function(a,b) assert(files[a] and not files[b]);files[b]=files[a];files[a]=nil end,
@@ -144,5 +145,24 @@ check('start opens status without starting pairing',function()
    assert(not table.concat(rows,'\n'):find('PAIRING CODE:',1,true),'Start automatically entered pairing')
    return {'char','q'}
  end})
+end)
+print('PASS: '..tests..' total companion checks')
+
+check('single-block monitor scales down and shows turtle telemetry',function()
+ local r=application({function(rows)
+   assert(rows[3]=='Mining','Small monitor missing turtle state')
+   assert(rows[4]:find('Y 18 D 46',1,true),'Small monitor missing Y/depth')
+   assert(rows[5]=='Fuel 1450','Small monitor missing fuel')
+   assert(rows[10]=='[<][>][R][P]','Compact buttons missing')
+   return {'char','q'}
+ end},true,nil,nil,true)
+ assert(not table.concat(r.rows,'\n'):find('Monitor too small',1,true))
+end)
+check('compact pairing preserves full station ID and code',function()
+ application({function(rows)
+   assert(rows[2]=='Station ID:' and rows[3]=='7','Compact pairing lost ID')
+   assert(rows[4]=='Pairing code:' and rows[5]:match('^%d%d%d%d%d%d$'),'Compact pairing lost code')
+   return {'key',4}
+ end},false,nil,'pair',true)
 end)
 print('PASS: '..tests..' total companion checks')

@@ -1,7 +1,7 @@
--- Mole Companion v0.3.0 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.1 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.0'
+local VERSION='0.3.1'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -254,7 +254,8 @@ local function hardware()
   monitorName=choose('monitor',nil,'Place a monitor next to this computer.')
   if not monitorName then return false end
   monitor=peripheral.wrap(monitorName)
-  monitor.clear();monitor.setCursorPos(1,1);monitor.write('Mole Companion - monitor connected')
+  if monitor.setTextScale then monitor.setTextScale(0.5) end
+  monitor.clear();monitor.setCursorPos(1,1);monitor.write('Mole connected')
   print('Monitor connected: '..monitorName)
   print('Step 2/6: connect wireless modem.')
   modemName=choose('modem',wireless,'Connect a wireless or Ender modem. A wired modem cannot contact turtles.')
@@ -286,8 +287,36 @@ local function line(target,y,value,width)
 end
 local function display(target,isMonitor)
   local width,height=target.getSize();target.clear();hits={}
-  if width<18 or height<8 then
+  if width<10 or height<6 then
     line(target,1,'Monitor too small.',width);if height>=2 then line(target,2,'Add monitor blocks.',width) end;return
+  end
+  if width<29 or height<12 then
+    local t=selected();local rows={demo and 'Mole DEMO' or 'Mole Companion'}
+    if pairing then
+      rows={'Pair turtle','Station ID:',''..os.getComputerID(),'Pairing code:',pairing.code}
+      if pairConfirm then rows[#rows+1]='Turtle #'..pairConfirm.id;rows[#rows+1]='Y=yes N=no'
+      else rows[#rows+1]='mole companion';rows[#rows+1]='Choose 1 on';rows[#rows+1]='the turtle.' end
+    elseif t then
+      rows[#rows+1]=t.name..' #'..t.id
+      rows[#rows+1]=t.awaitingMole and 'Waiting for Mole' or M.online(t,now()) and (t.status and t.status.phase or 'Connected') or 'No contact'
+      if t.status then
+        rows[#rows+1]=t.status.uncertain and 'Pos uncertain' or 'Y '..t.status.y..' D '..t.status.depth
+        rows[#rows+1]='Fuel '..t.status.fuel
+      end
+      if t.command then rows[#rows+1]='Return '..t.command.result end
+      local content={}
+      if mode=='blocks' then
+        local ids={};for id in pairs(t.blocks) do ids[#ids+1]=id end;table.sort(ids)
+        for _,id in ipairs(ids) do for _,part in ipairs(M.wrap(id..' x'..t.blocks[id].count,width)) do content[#content+1]=part end end
+      else for _,entry in ipairs(t.logs) do for _,part in ipairs(M.wrap(entry,width)) do content[#content+1]=part end end end
+      local room=math.max(0,height-1-#rows);local finish=math.max(0,#content-scroll)
+      for i=math.max(1,finish-room+1),finish do rows[#rows+1]=content[i] end
+    else rows={'No turtles yet','companion pair','on the computer'} end
+    if confirmReturn then rows={'Return turtle?','Y=yes on PC','Esc=cancel'} end
+    for y=1,math.min(height-1,#rows) do line(target,y,rows[y],width) end
+    line(target,height,'[<][>][R][P]',width)
+    if isMonitor then hits={prev={1,3,height},next={4,6,height},returnHome={7,9,height},pair={10,12,height}} end
+    return
   end
   local t=selected();local rows={demo and 'MOLE COMPANION - DEMO' or 'MOLE COMPANION'}
   if pairing then
@@ -352,7 +381,11 @@ local function render()
   -- Monitor drawing never redirects the computer terminal.
   display(term,false)
   -- display(term) cleared hit positions; recreate from monitor dimensions.
-  if ok then local _,h=monitor.getSize();hits={prev={1,6,h-1},next={8,13,h-1},returnHome={15,22,h-1},pair={24,29,h-1}} end
+  if ok then
+    local w,h=monitor.getSize()
+    hits=(w<29 or h<12) and {prev={1,3,h},next={4,6,h},returnHome={7,9,h},pair={10,12,h}}
+      or {prev={1,6,h-1},next={8,13,h-1},returnHome={15,22,h-1},pair={24,29,h-1}}
+  end
 end
 local function pairStart()
   if demo then note='Demo only. Exit to pair real turtles.';return end
@@ -418,13 +451,13 @@ while true do
     end
   elseif event=='timer' and a==timer then
     if pairing and now()>=pairing.expires then pairing=nil;pairConfirm=nil;note='No completed pairing. Keep turtle nearby; press P to retry.' end
-    if peripheral.isPresent(monitorName) then monitor=peripheral.wrap(monitorName) end
+    if peripheral.isPresent(monitorName) then monitor=peripheral.wrap(monitorName);if monitor.setTextScale then monitor.setTextScale(0.5) end end
     if peripheral.isPresent(modemName) then pcall(rednet.open,modemName) end
     M.tick(state,now(),send)
     if demo then for _,id in ipairs(state.order) do state.turtles[id].lastSeen=now() end end
     timer=os.startTimer(1)
   elseif event=='peripheral' or event=='peripheral_detach' then
-    if peripheral.isPresent(monitorName) then monitor=peripheral.wrap(monitorName) end
+    if peripheral.isPresent(monitorName) then monitor=peripheral.wrap(monitorName);if monitor.setTextScale then monitor.setTextScale(0.5) end end
     if peripheral.isPresent(modemName) then pcall(rednet.open,modemName) else note='Modem disconnected. Reattach it.' end
   end
   render()
