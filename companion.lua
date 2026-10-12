@@ -1,7 +1,7 @@
--- Mole Companion v0.1.0 - optional CC:Tweaked monitoring station.
--- Mole turtle support is a separate, forthcoming update. No turtle is modified here.
+-- Mole Companion v0.2.0 - optional CC:Tweaked monitoring station.
+-- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.1.0'
+local VERSION='0.2.0'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -128,6 +128,52 @@ if argv[1]=='--test' then return M end
 
 local ROOT='mole-companion-data'
 local function now() return os.epoch('utc')/1000 end
+local function maintenance()
+  local program=shell.getRunningProgram()
+  if argv[1]=='remove' then
+    print('Remove Companion and all pairings?')
+    write('Are you sure? yes/no: ')
+    if read():match('^%s*(.-)%s*$'):lower()~='yes' then print('Removal cancelled.');return end
+    fs.delete(ROOT)
+    for _,suffix in ipairs({'.update-download','.update-backup'}) do if fs.exists(program..suffix) then fs.delete(program..suffix) end end
+    fs.delete(program)
+    print('Companion successfully removed.')
+    print('Remove any Companion startup line.')
+    return
+  end
+  if not http or not http.get then print('Downloads disabled. Ask server owner.');return end
+  print('Downloading a clean Companion install.')
+  local response,why,failed=http.get('https://raw.githubusercontent.com/Nom4d-temp/mole-companion/main/companion.lua?update='..os.epoch('utc'),
+    {['Cache-Control']='no-cache',['Pragma']='no-cache'})
+  if not response then if failed then failed.close() end;print('Download failed. Current install kept.');return end
+  local ok,source=pcall(response.readAll);response.close()
+  if not ok or type(source)~='string' or not source:match('^%-%- Mole Companion v%d+%.%d+%.%d+') or not load(source,'@Companion update','t',_ENV) then
+    print('Invalid download. Current install kept.');return
+  end
+  local temp=program..'.update-download'
+  local old=fs.open(program,'r');local original=old and old.readAll();if old then old.close() end
+  local installed=false
+  local success,err=pcall(function()
+    local h=assert(fs.open(temp,'w'));h.write(source);h.close()
+    h=assert(fs.open(temp,'r'));local saved=h.readAll();h.close();assert(saved==source,'Saved download did not match')
+    fs.delete(program);fs.move(temp,program);installed=true
+    fs.delete(ROOT)
+    if fs.exists(program..'.update-backup') then fs.delete(program..'.update-backup') end
+  end)
+  if not success then
+    if not installed and original then pcall(function() local h=assert(fs.open(program,'w'));h.write(original);h.close() end) end
+    if fs.exists(temp) then pcall(fs.delete,temp) end
+    print(installed and 'Program updated; settings cleanup failed.' or 'Install failed; check program file before retrying.')
+    return
+  end
+  print('Companion updated. Settings cleared.')
+  print('Run companion to set up and pair again.')
+end
+if argv[1]=='remove' or argv[1]=='update' then
+  local ok=pcall(maintenance)
+  if not ok then print('Operation stopped. Check files before retrying.') end
+  return
+end
 local function readConfig(path)
   if not fs.exists(path) then return nil end
   local h=fs.open(path,'r');if not h then return nil end
@@ -193,11 +239,13 @@ end
 if argv[1]=='help' then
   print('companion       Open the station')
   print('companion demo  Preview with fake data')
+  print('companion update  Clean install')
+  print('companion remove  Delete program/data')
   print('P: pair  Arrows: choose turtle')
   print('D: discoveries  L: log  R: return')
   print('Q: close (turtles keep working)');return
 end
-if argv[1] and argv[1]~='demo' then print('Use companion, companion demo, or companion help.');return end
+if argv[1] and argv[1]~='demo' then print('Use companion help for commands.');return end
 if not hardware() then return end
 local demo=argv[1]=='demo'
 if demo then

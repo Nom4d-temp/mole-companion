@@ -1,10 +1,10 @@
 # Mole Companion protocol v1
 
-This is the contract for the future optional Mole integration. No turtle implementation is included. Use Rednet protocol `mole-companion/1`. All messages are plain tables, version `v=1`. Never evaluate received Lua or shell commands. This protocol is for trusted networks, not adversarial authentication.
+This protocol is implemented by optional companion support in Mole 1.6.0+. Use Rednet protocol `mole-companion/1`. All messages are plain tables, version `v=1`. Never evaluate received Lua or shell commands. This protocol is for trusted networks, not adversarial authentication.
 
 ## Pairing
 
-The station displays its computer ID and a six-digit code for 120 seconds. A future `mole pair <station ID> <code>` command must check that the turtle has a wireless modem (`isWireless()` true), open it, and send directly to that station:
+The station displays its computer ID and a six-digit code for 120 seconds. The `mole pair <station ID> <code>` command must check that the turtle has a wireless modem (`isWireless()` true), open it, and send directly to that station:
 
 ```lua
 {v=1,kind="pair_hello",code="123456",name="North",wireless=true}
@@ -74,6 +74,6 @@ Turtle to station:
 
 Results: `accepted`, `completed` (home and paused), or `rejected`. Repeated request IDs must be idempotent and re-acknowledged, including across reboot where persisted. The station sends immediately, retries at 3/6/9 seconds, and stops retrying at 12 seconds if no acknowledgement arrives. It labels the request unconfirmed and permits an explicit retry. Accepted requests are not periodically reissued; status remains the source of progress if a completion acknowledgement is lost.
 
-## Optionality requirements for future Mole code
+## Optionality requirements for Mole
 
 Network support must be disabled unless explicitly paired/enabled. No modem, detached modem, missing station, malformed packets, full queues, or send/receive errors may affect movement, refueling, recovery, or job state. Use bounded outgoing queues and isolate listener errors. Network callbacks only set flags; the main mining loop owns physical actions and checkpoint writes. Ctrl+T termination remains local, and reports resume only when Mole runs. Standalone Mole must still pass its complete regression suite without network globals.
