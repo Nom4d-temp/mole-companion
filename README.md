@@ -1,4 +1,4 @@
-# Mole Companion 0.3.2
+# Mole Companion 0.3.3
 
 **Keep an eye on your Moles from one place.** Mole Companion turns a CC:Tweaked computer and monitor into a station for watching multiple mining turtles. Choose a turtle to see its status, recent Mole output, and unfamiliar blocks it has mined, or ask it to return home.
 

@@ -194,3 +194,15 @@ check('display clears waiting notice on acceptance and completion',function()
  end})
 end)
 print('PASS: '..tests..' total companion checks')
+check('resuming work clears completed return',function()
+ for _,phase in ipairs({'Mining','Returning to work','At the chest','Returning home','Recovering position','Emergency escape'}) do
+  local s=state();M.receive(s,4,packet(),1);s.turtles[4].command={id='old',result='completed'}
+  local m=packet(nil,2);m.phase=phase;assert(M.receive(s,4,m,2));assert(not s.turtles[4].command)
+ end
+end)
+check('new quarry clears return but active return stays visible',function()
+ local s=state();M.receive(s,4,packet(),1);s.turtles[4].command={id='active',result='accepted'}
+ assert(M.receive(s,4,packet(nil,2),2));assert(s.turtles[4].command)
+ local m=packet(nil,3);m.job='new-job';assert(M.receive(s,4,m,3));assert(not s.turtles[4].command)
+end)
+print('PASS: '..tests..' total companion checks')

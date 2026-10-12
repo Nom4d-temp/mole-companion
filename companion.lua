@@ -1,7 +1,7 @@
--- Mole Companion v0.3.2 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.3 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.2'
+local VERSION='0.3.3'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -65,6 +65,8 @@ function M.receive(state,sender,msg,now)
     if not text(msg.phase,32) or not number(msg.y) or not number(msg.depth) or not number(msg.right) or not number(msg.forward) then return false end
     if not (number(msg.fuel) and msg.fuel>=0 or msg.fuel=='unlimited') then return false end
     if t.job and t.job~=msg.job then t.blocks={};t.command=nil;addLog(t,'New quarry started.') end
+    -- A finished return belongs to the previous pause, not resumed mining.
+    if t.command and t.command.result=='completed' and (msg.phase=='Mining' or msg.phase=='Returning to work' or msg.phase=='At the chest' or msg.phase=='Returning home' or msg.phase=='Recovering position' or msg.phase=='Emergency escape') then t.command=nil end
     t.job=msg.job;t.statusAt=now;t.awaitingMole=false
     t.status={phase=text(msg.phase,32),y=msg.y,depth=msg.depth,right=msg.right,forward=msg.forward,
       fuel=msg.fuel,uncertain=msg.uncertain==true,detail=text(msg.detail,160),progress=text(msg.progress,64)}
