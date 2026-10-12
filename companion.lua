@@ -1,7 +1,7 @@
--- Mole Companion v0.3.8 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.9 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.8'
+local VERSION='0.3.9'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -185,7 +185,7 @@ local function maintenance()
     return
   end
   print('Companion updated. Pairings kept.')
-  print('Run companion start for the display.')
+  print('Run \'companion start\' for the display.')
 end
 if argv[1]=='remove' or argv[1]=='update' then
   local ok=pcall(maintenance)
@@ -206,7 +206,7 @@ if not argv[1] or argv[1]=='help' then
   return
 end
 if argv[1]~='start' and argv[1]~='pair' and argv[1]~='demo' and argv[1]~='unpair' then
-  print('Unknown command. Use companion help.');return
+  print('Unknown command. Use \'companion help\'.');return
 end
 local function readConfig(path)
   if not fs.exists(path) then return nil end
@@ -253,7 +253,7 @@ if argv[1]=='unpair' then
   local ok=pcall(save)
   if not ok then print('Could not save. Check pairing files.');return end
   print('Turtle unpaired from this station.')
-  print('On turtle: mole companion, option 2.')
+  print('On turtle: \'mole companion\', option 2.')
   return
 end
 local function choose(kind,predicate,prompt)
@@ -291,7 +291,7 @@ local function hardware()
   if not modemName then return false end
   rednet.open(modemName)
   print('Modem connected. Station ID: '..os.getComputerID())
-  print('Pairing needs companion-ready Mole.');print('Use companion demo to preview.')
+  print('Pairing needs companion-ready Mole.');print('Use \'companion demo\' to preview.')
   return true
 end
 if not hardware() then return end
@@ -299,7 +299,7 @@ local demo=argv[1]=='demo'
 if demo then
   state=M.new({{id=21,name='Demo North',token='demo-only-token'},{id=22,name='Demo South',token='demo-only-token'}})
   for i,id in ipairs(state.order) do
-    M.receive(state,id,{v=1,kind='status',session='demo',seq=1,token='demo-only-token',job='demo-job',phase=i==1 and 'Mining' or 'Waiting for fuel',y=18,depth=46,right=3,forward=7,fuel=1450,detail=i==2 and 'Refill the chest; use mole resume.' or nil},now())
+    M.receive(state,id,{v=1,kind='status',session='demo',seq=1,token='demo-only-token',job='demo-job',phase=i==1 and 'Mining' or 'Waiting for fuel',y=18,depth=46,right=3,forward=7,fuel=1450,detail=i==2 and 'Refill the chest; use \'mole resume\'.' or nil},now())
     M.receive(state,id,{v=1,kind='log',session='demo',seq=1,token='demo-only-token',text='DEMO: simulated turtle; no real commands.'},now())
   end
   M.receive(state,21,{v=1,kind='discovery',session='demo',seq=1,token='demo-only-token',job='demo-job',block='examplemod:tin_ore',name='Tin ore',count=8},now())
@@ -360,7 +360,7 @@ local function display(target,isMonitor)
       rows[#rows+1]='Is this yours? Y=yes N=no Esc=cancel'
     else
       rows[#rows+1]='Turtle: keep pickaxe + wireless modem'
-      rows[#rows+1]='Run mole companion; choose 1.'
+      rows[#rows+1]='Run \'mole companion\'; choose 1.'
       rows[#rows+1]='Enter ID + code above. Esc: cancel'
     end
   elseif t then
@@ -382,7 +382,7 @@ local function display(target,isMonitor)
     if t.command then rows[#rows+1]='Return: '..t.command.result end
   else
     rows[#rows+1]='No paired turtles yet.'
-    rows[#rows+1]=firstPairOffer and 'Pair now? Y=yes N=later' or 'Use companion pair, or press P.'
+    rows[#rows+1]=firstPairOffer and 'Pair now? Y=yes N=later' or 'Use \'companion pair\', or press P.'
     rows[#rows+1]='Keep it nearby with a wireless modem.'
   end
   local content={}
@@ -501,5 +501,5 @@ while true do
 end
 term.clear();term.setCursorPos(1,1);if pairOnly then
   print(pairComplete and 'Connection checked. Pairing complete.' or 'Pairing setup closed.')
-  print('Use companion start for the display.')
+  print('Use \'companion start\' for the display.')
 else print('Companion closed. Turtles keep working.') end

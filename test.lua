@@ -139,7 +139,7 @@ check('pair command opens wizard immediately and escape exits',function()
    assert(rows[3]=='STATION COMPUTER ID: 7' and rows[4]:find('PAIRING CODE:',1,true),'Pair command did not open wizard')
    return {'key',4}
  end},false,nil,'pair')
- assert(r.output:find('Use companion start for the display.',1,true))
+ assert(r.output:find('Use \'companion start\' for the display.',1,true))
 end)
 check('start opens status without starting pairing',function()
  application({function(rows)
