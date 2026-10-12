@@ -1,7 +1,7 @@
--- Mole Companion v0.2.1 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.0 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.2.1'
+local VERSION='0.3.0'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -187,6 +187,21 @@ if argv[1]=='remove' or argv[1]=='update' then
   if not ok then print('Operation stopped. Check files before retrying.') end
   return
 end
+if not argv[1] or argv[1]=='help' then
+  print('Mole Companion '..VERSION)
+  print('companion start   Open turtle display')
+  print('companion pair    Pair a turtle')
+  print('companion update  Clean install')
+  print('companion remove  Delete program/data')
+  print('companion demo    Preview fake data')
+  print('companion help    Show this guide')
+  print('Start: arrows choose; R requests home')
+  print('D: blocks  L: log  Q: close')
+  return
+end
+if argv[1]~='start' and argv[1]~='pair' and argv[1]~='demo' then
+  print('Unknown command. Use companion help.');return
+end
 local function readConfig(path)
   if not fs.exists(path) then return nil end
   local h=fs.open(path,'r');if not h then return nil end
@@ -249,16 +264,6 @@ local function hardware()
   print('Pairing needs companion-ready Mole.');print('Use companion demo to preview.')
   return true
 end
-if argv[1]=='help' then
-  print('companion       Open the station')
-  print('companion demo  Preview with fake data')
-  print('companion update  Clean install')
-  print('companion remove  Delete program/data')
-  print('P: pair  Arrows: choose turtle')
-  print('D: discoveries  L: log  R: return')
-  print('Q: close (turtles keep working)');return
-end
-if argv[1] and argv[1]~='demo' then print('Use companion help for commands.');return end
 if not hardware() then return end
 local demo=argv[1]=='demo'
 if demo then
@@ -269,7 +274,9 @@ if demo then
   end
   M.receive(state,21,{v=1,kind='discovery',session='demo',seq=1,token='demo-only-token',job='demo-job',block='examplemod:tin_ore',name='Tin ore',count=8},now())
 end
-local firstPairOffer=not demo and #state.order==0
+local firstPairOffer=false
+local pairOnly=argv[1]=='pair'
+local pairComplete=false
 local scroll=0
 local mode='log';local note='';local pairing;local confirmReturn;local pairConfirm;local hits={}
 local function send(id,msg) if not demo then local ok,result=pcall(rednet.send,id,msg,PROTOCOL);return ok and result end;return false end
@@ -309,8 +316,8 @@ local function display(target,isMonitor)
     end
     if t.command then rows[#rows+1]='Return: '..t.command.result end
   else
-    rows[#rows+1]='Step 3/6: pair your first turtle'
-    rows[#rows+1]=firstPairOffer and 'Pair now? Y=yes N=later' or 'No turtles paired. Press P to begin.'
+    rows[#rows+1]='No paired turtles yet.'
+    rows[#rows+1]=firstPairOffer and 'Pair now? Y=yes N=later' or 'Use companion pair, or press P.'
     rows[#rows+1]='Keep it nearby with a wireless modem.'
   end
   local content={}
@@ -364,6 +371,7 @@ local function action(which)
   end
 end
 if not demo then save() end
+if pairOnly then pairStart() end
 local timer=os.startTimer(1);render()
 while true do
   local event,a,b,c=os.pullEvent()
@@ -397,7 +405,7 @@ while true do
   elseif event=='key' then
     if a==keys.left then action('prev') elseif a==keys.right or a==keys.tab then action('next')
     elseif a==keys.up then scroll=scroll+3 elseif a==keys.down then scroll=math.max(0,scroll-3)
-    elseif a==keys.escape then pairing=nil;pairConfirm=nil;confirmReturn=nil;note='Cancelled.' end
+    elseif a==keys.escape then pairing=nil;pairConfirm=nil;confirmReturn=nil;note='Cancelled.';if pairOnly then break end end
   elseif event=='monitor_touch' and a==monitorName then
     for name,hit in pairs(hits) do if b>=hit[1] and b<=hit[2] and c==hit[3] then action(name);break end end
   elseif event=='rednet_message' and c==PROTOCOL and not demo then
@@ -405,7 +413,7 @@ while true do
       if not pairConfirm then pairConfirm={id=a,name=text(b.name,32) or 'Turtle '..a} end
     else
       local reply=M.control(state,a,b,now())
-      if reply then send(a,reply);if b.kind=='pair_ready' then note='Connection checked. Pairing complete.' end
+      if reply then send(a,reply);if b.kind=='pair_ready' then note='Connection checked. Pairing complete.';pairComplete=true;if pairOnly then render();break end end
       else M.receive(state,a,b,now()) end
     end
   elseif event=='timer' and a==timer then
@@ -421,4 +429,7 @@ while true do
   end
   render()
 end
-term.clear();term.setCursorPos(1,1);print('Companion closed. Turtles keep working.')
+term.clear();term.setCursorPos(1,1);if pairOnly then
+  print(pairComplete and 'Connection checked. Pairing complete.' or 'Pairing setup closed.')
+  print('Use companion start for the display.')
+else print('Companion closed. Turtles keep working.') end

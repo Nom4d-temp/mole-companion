@@ -34,7 +34,7 @@ check('control characters sanitized',function() assert(M.wrap('a\nb',39)[1]=='a 
 print('PASS: '..tests..' companion protocol/state tests')
 
 -- Full application smoke tests: no Minecraft required. Render on 39x12 surfaces.
-local function application(events,demo,hardwareNames)
+local function application(events,demo,hardwareNames,command)
   local env=setmetatable({},{__index=_G});local files={};local saved={};local writes=0;local redraws=0;local timer=0;local packets={}
   local function surface()
     local rows={};local y=1
@@ -58,7 +58,9 @@ local function application(events,demo,hardwareNames)
   env.os={epoch=function() return 10000 end,getComputerID=function() return 7 end,startTimer=function() timer=timer+1;return timer end,
     pullEvent=function() local e=table.remove(events,1);assert(e,'App did not close');if type(e)=='function' then e=e(getRows(),packets) end;if e[1]=='detach' then present=false;return 'peripheral_detach','monitor' end;return table.unpack(e) end}
   local output={};env.print=function(v) output[#output+1]=v end;env.write=function() end;env.read=function() return 'q' end
-  assert(load(source,'companion','t',env))(demo and 'demo' or nil)
+  local argument=command or (demo and 'demo' or 'start')
+  if command=='overview' then argument=nil end
+  assert(load(source,'companion','t',env))(argument)
   return {writes=writes,redraws=redraws,rows=getRows(),output=table.concat(output,'\n')}
 end
 check('station starts and quits without touching turtles',function() local r=application({{'char','q'}});assert(r.writes>0 and r.redraws>0) end)
@@ -112,16 +114,35 @@ check('connection check validates token and echoes nonce',function()
  local s=state();local p={v=1,kind='ping',token='secret-token',nonce='abc'}
  assert(M.control(s,4,p,5).nonce=='abc');p.token='wrong';assert(not M.control(s,4,p,6))
 end)
-check('first-turtle wizard shows separate ID/code and confirms connection',function()
+check('pair wizard shows separate ID/code and confirms connection',function()
  local pin
- local r=application({{'char','y'},function(rows)
+ local r=application({{'char','p'},function(rows)
    assert(rows[3]=='STATION COMPUTER ID: 7','Missing labelled station ID')
    pin=assert(rows[4]:match('^PAIRING CODE: (%d+)$'),'Missing labelled code')
    return {'rednet_message',21,{v=1,kind='pair_hello',code=pin,wireless=true,name='North'},M.protocol}
  end,{'char','y'},function(_,packets)
    local paired=packets[#packets];assert(paired.kind=='paired')
    return {'rednet_message',21,{v=1,kind='pair_ready',code=pin,token=paired.token},M.protocol}
- end,{'char','q'}})
+ end,{'char','q'}},false,nil,'pair')
+ assert(r.output:find('Pairing complete.',1,true),'Pair command did not finish')
  assert(table.concat(r.rows,'\n'):find('Paired - waiting for Mole to run',1,true),'Pairing looked disconnected before mining')
+end)
+print('PASS: '..tests..' total companion checks')
+
+check('plain companion only shows guide, needs no hardware',function()
+ local r=application({},false,{},'overview');assert(r.writes==0 and r.redraws==0 and r.output:find('companion start',1,true) and r.output:find('companion pair',1,true))
+end)
+check('pair command opens wizard immediately and escape exits',function()
+ local r=application({function(rows)
+   assert(rows[3]=='STATION COMPUTER ID: 7' and rows[4]:find('PAIRING CODE:',1,true),'Pair command did not open wizard')
+   return {'key',4}
+ end},false,nil,'pair')
+ assert(r.output:find('Use companion start for the display.',1,true))
+end)
+check('start opens status without starting pairing',function()
+ application({function(rows)
+   assert(not table.concat(rows,'\n'):find('PAIRING CODE:',1,true),'Start automatically entered pairing')
+   return {'char','q'}
+ end})
 end)
 print('PASS: '..tests..' total companion checks')

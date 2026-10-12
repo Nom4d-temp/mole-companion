@@ -1,4 +1,4 @@
-# Mole Companion 0.2.1
+# Mole Companion 0.3.0
 
 **Keep an eye on your Moles from one place.** Mole Companion turns a CC:Tweaked computer and monitor into a station for watching multiple mining turtles. Choose a turtle to see its status, recent Mole output, and unfamiliar blocks it has mined, or ask it to return home.
 
@@ -22,26 +22,30 @@ wget https://raw.githubusercontent.com/Nom4d-temp/mole-companion/main/companion.
 companion
 ```
 
+This shows the command guide. Use `companion pair` to connect a turtle, or `companion start` to open the status display.
+
 ## Guided setup
 
 1. **Connect a monitor.** Place it next to the computer. The companion checks for it and shows a test message. If several are connected, choose one from a numbered list.
 2. **Connect a modem.** Place a wireless or Ender modem next to the computer. Wired modems are identified as unsuitable for contacting wireless turtles. If equipment is missing, attach it and press Enter to retry; `q` exits setup.
 3. **Try the demo now:** run `companion demo`. It displays two fictional turtles and a sample unfamiliar block. Return commands are disabled and demo turtles are never saved.
-4. **Pair your first turtle:** the station offers **Pair now? Y/N** when no turtles are paired. Press Y, or use P later. Keep the turtle nearby with its modem equipped.
+4. **Pair a turtle:** run `companion pair` on the computer. This opens guided pairing immediately. Keep the turtle nearby with its modem equipped.
 5. The station clearly shows **STATION COMPUTER ID** and **PAIRING CODE**, with a five-minute countdown. On the turtle, run `mole companion`, choose **1**, and follow its numbered steps. Enter the displayed ID and six-digit code. Invalid entries and missing modems can be retried.
 6. When the turtle replies, the station shows its ID/name. Press **Y** if it is yours, or **N** to wait for the correct turtle. Choose a friendly name; Enter keeps the current name.
-7. Both devices check the connection. The station shows **Paired - waiting for Mole to run** until you start or resume mining. Use `mole new` or `mole resume` on the turtle.
+7. Both devices confirm the connection. Pairing closes back to the computer command prompt. Run `companion start` to open the display; it shows **Paired - waiting for Mole to run** until you use `mole new` or `mole resume` on the turtle.
 
-Press Escape on the station to cancel pairing. If confirmation times out, keep the devices nearby, check chunks and modems, then press P to retry. Existing pairings are retained until a new pairing is confirmed. On an already paired turtle, option **3** in `mole companion` checks the connection; option **1** re-pairs, and option **2** disables reporting.
+Press Escape on the station to cancel pairing. If confirmation times out, keep the devices nearby, check chunks and modems, then run `companion pair` to retry. Existing pairings are retained until a new pairing is confirmed. On an already paired turtle, option **3** in `mole companion` checks the connection; option **1** re-pairs, and option **2** disables reporting.
 
 
-The companion does not automatically replace the computer's startup file. If you want it to open on boot, add `shell.run("companion")` to your own startup program.
+The companion does not automatically replace the computer's startup file. If you want it to open on boot, add `shell.run("companion", "start")` to your own startup program.
 
 ## Everyday controls
 
 | Key or command | Action |
 | --- | --- |
-| `companion` | Open the station and check hardware |
+| `companion` | Show the command overview |
+| `companion start` | Open turtle status and activity display |
+| `companion pair` | Open guided turtle pairing |
 | `companion demo` | Preview with simulated data |
 | `companion help` | Show the short control list |
 | `companion update` | Install the latest program and clear all station settings |
@@ -84,7 +88,7 @@ Pairing prevents accidental control of the wrong turtle, but Rednet is not encry
 
 ## Update or remove
 
-Run `companion update` for a **clean install** of the latest GitHub program. Successful updates erase all pairings, names, and settings, even if the version is unchanged. No old program backup is kept. Run `companion` afterward and pair your turtles again. Failed or invalid downloads leave the current installation intact.
+Run `companion update` for a **clean install** of the latest GitHub program. Successful updates erase all pairings, names, and settings, even if the version is unchanged. No old program backup is kept. Run `companion pair` afterward to pair your turtles again, then `companion start` to open the display. Failed or invalid downloads leave the current installation intact.
 
 Run `companion remove`, then type `yes`, to delete the program and all its saved data without a backup. Any other answer cancels. If your own startup program launches Companion, remove that launch line yourself; unrelated startup files are kept.
 
