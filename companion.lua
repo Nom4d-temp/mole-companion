@@ -1,7 +1,7 @@
--- Mole Companion v0.3.1 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.2 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.1'
+local VERSION='0.3.2'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -110,6 +110,11 @@ function M.command(state,id,now)
   local request=tostring(now)..'-'..state.serial
   t.command={id=request,result='sent',sent=now,attempts=0,changed=now}
   return {v=1,kind='command',action='return',token=t.token,request=request,session=t.session}
+end
+function M.returnNotice(command)
+  local notices={sent='Return sent; waiting for reply.',accepted='Return accepted; heading home.',
+    completed='Home and paused.',rejected='Return rejected. See turtle log.',unconfirmed='Return unconfirmed. Check connection.'}
+  return command and notices[command.result] or ''
 end
 function M.tick(state,now,send)
   for _,id in ipairs(state.order) do
@@ -279,6 +284,7 @@ local firstPairOffer=false
 local pairOnly=argv[1]=='pair'
 local pairComplete=false
 local scroll=0
+local returnNotice
 local mode='log';local note='';local pairing;local confirmReturn;local pairConfirm;local hits={}
 local function send(id,msg) if not demo then local ok,result=pcall(rednet.send,id,msg,PROTOCOL);return ok and result end;return false end
 local function selected() return state.turtles[state.order[state.selected]] end
@@ -370,7 +376,9 @@ local function display(target,isMonitor)
   local finish=math.max(0,#expanded-scroll)
   local first=math.max(1,finish-available+1)
   for i=first,finish do if y<height-2 then line(target,y,expanded[i],width);y=y+1 end end
-  line(target,height-2,confirmReturn and 'Return selected turtle? Y=yes Esc=no' or note,width)
+  local notice=note
+  if returnNotice and t and t.id==returnNotice.turtle and t.command and t.command.id==returnNotice.request then notice=M.returnNotice(t.command) end
+  line(target,height-2,confirmReturn and 'Return selected turtle? Y=yes Esc=no' or notice,width)
   line(target,height-1,'[Prev] [Next] [Return] [Pair]',width)
   line(target,height,'D: blocks L: log Up/Down: scroll Q: exit',width)
   if isMonitor then hits={prev={1,6,height-1},next={8,13,height-1},returnHome={15,22,height-1},pair={24,29,height-1}} end
@@ -389,12 +397,12 @@ local function render()
 end
 local function pairStart()
   if demo then note='Demo only. Exit to pair real turtles.';return end
-  firstPairOffer=false
+  firstPairOffer=false;returnNotice=nil
   pairing={code=tostring(math.random(100000,999999)),expires=now()+300};pairConfirm=nil;confirmReturn=nil
   note='Pairing open for five minutes.'
 end
 local function action(which)
-  confirmReturn=nil;scroll=0
+  confirmReturn=nil;scroll=0;returnNotice=nil;note=''
   if which=='prev' and #state.order>0 then state.selected=(state.selected-2)%#state.order+1
   elseif which=='next' and #state.order>0 then state.selected=state.selected%#state.order+1
   elseif which=='pair' then pairStart()
@@ -432,7 +440,7 @@ while true do
       pairing=nil;pairConfirm=nil
     elseif key=='y' and confirmReturn then
       local packet,why=M.command(state,confirmReturn,now())
-      if packet then send(confirmReturn,packet);note='Return sent; waiting for acknowledgement.' else note=why end
+      if packet then send(confirmReturn,packet);returnNotice={turtle=confirmReturn,request=packet.request};note='' else note=why end
       confirmReturn=nil
     end
   elseif event=='key' then

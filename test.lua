@@ -54,7 +54,7 @@ local function application(events,demo,hardwareNames,command,smallMonitor)
     hasType=function(n,t) return n=='monitor' and t=='monitor' or (n=='wireless' or n=='wired') and t=='modem' end,
     wrap=function(n) return n=='monitor' and monitor or n=='wired' and wired or wireless end,
     isPresent=function(n) return n~='monitor' or present end}
-  env.rednet={open=function() end,send=function(id,msg) if msg.kind=='paired' or msg.kind=='pair_verified' or msg.kind=='pong' then packets[#packets+1]=msg;return true end;error('Demo or unpaired station sent a turtle command') end}
+  env.rednet={open=function() end,send=function(id,msg) if msg.kind=='paired' or msg.kind=='pair_verified' or msg.kind=='pong' or msg.kind=='command' and not demo then packets[#packets+1]=msg;return true end;error('Demo or unpaired station sent a turtle command') end}
   env.keys={left=1,right=2,tab=3,escape=4,up=5,down=6}
   env.os={epoch=function() return 10000 end,getComputerID=function() return 7 end,startTimer=function() timer=timer+1;return timer end,
     pullEvent=function() local e=table.remove(events,1);assert(e,'App did not close');if type(e)=='function' then e=e(getRows(),packets) end;if e[1]=='detach' then present=false;return 'peripheral_detach','monitor' end;return table.unpack(e) end}
@@ -164,5 +164,33 @@ check('compact pairing preserves full station ID and code',function()
    assert(rows[4]=='Pairing code:' and rows[5]:match('^%d%d%d%d%d%d$'),'Compact pairing lost code')
    return {'key',4}
  end},false,nil,'pair',true)
+end)
+print('PASS: '..tests..' total companion checks')
+
+check('return notice follows acknowledged state',function()
+ assert(M.returnNotice({result='sent'}):find('waiting',1,true))
+ for _,result in ipairs({'accepted','completed','rejected','unconfirmed'}) do assert(not M.returnNotice({result=result}):find('waiting',1,true),'Stale waiting notice') end
+end)
+check('display clears waiting notice on acceptance and completion',function()
+ local pin,token,request
+ application({{'char','p'},function(rows)
+   pin=assert(rows[4]:match('PAIRING CODE: (%d+)'))
+   return {'rednet_message',21,{v=1,kind='pair_hello',code=pin,wireless=true,name='North'},M.protocol}
+ end,{'char','y'},function(_,packets)
+   token=packets[#packets].token
+   return {'rednet_message',21,{v=1,kind='pair_ready',code=pin,token=token},M.protocol}
+ end,function()
+   return {'rednet_message',21,{v=1,kind='status',session='boot',seq=1,job='job',token=token,phase='Mining',y=20,depth=40,right=1,forward=2,fuel=1000},M.protocol}
+ end,{'char','r'},{'char','y'},function(rows,packets)
+   assert(rows[10]=='Return sent; waiting for reply.')
+   request=packets[#packets].request
+   return {'rednet_message',21,{v=1,kind='ack',session='boot',seq=1,token=token,request=request,result='accepted'},M.protocol}
+ end,function(rows)
+   assert(rows[10]=='Return accepted; heading home.','Waiting notice survived acceptance')
+   return {'rednet_message',21,{v=1,kind='ack',session='boot',seq=2,token=token,request=request,result='completed'},M.protocol}
+ end,function(rows)
+   assert(rows[10]=='Home and paused.','Waiting notice survived completion')
+   return {'char','q'}
+ end})
 end)
 print('PASS: '..tests..' total companion checks')
