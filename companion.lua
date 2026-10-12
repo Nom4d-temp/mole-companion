@@ -1,7 +1,7 @@
--- Mole Companion v0.3.3 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.4 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.3'
+local VERSION='0.3.4'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -350,6 +350,7 @@ local function display(target,isMonitor)
       rows[#rows+1]=t.status.uncertain and 'Position uncertain; recovering.' or (fresh and 'Y ' or 'Last Y ')..t.status.y..' | Depth '..t.status.depth
       rows[#rows+1]='Right '..t.status.right..' | Forward '..t.status.forward
       rows[#rows+1]=(fresh and 'Fuel: ' or 'Last fuel: ')..t.status.fuel
+      if t.status.progress then rows[#rows+1]=t.status.progress end
     end
     if t.command then rows[#rows+1]='Return: '..t.command.result end
   else
@@ -365,7 +366,6 @@ local function display(target,isMonitor)
       if #content==0 then content={'No unfamiliar blocks reported.'} end
     else
       if t.status and t.status.detail then content[#content+1]=t.status.detail end
-      if t.status and t.status.progress then content[#content+1]=t.status.progress end
       for _,entry in ipairs(t.logs) do content[#content+1]=entry end
     end
   end
