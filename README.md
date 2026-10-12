@@ -1,15 +1,15 @@
-# Mole Companion 0.2.0
+# Mole Companion 0.2.1
 
 **Keep an eye on your Moles from one place.** Mole Companion turns a CC:Tweaked computer and monitor into a station for watching multiple mining turtles. Choose a turtle to see its status, recent Mole output, and unfamiliar blocks it has mined, or ask it to return home.
 
-Use **Mole 1.6.0 or newer** on your turtles. Wireless support stays optional; enable and pair it through `mole companion`.
+Use **Mole 1.6.1 or newer** on your turtles. Wireless support stays optional; enable and pair it through `mole companion`.
 
 ## What you need
 
 - A normal or advanced CC:Tweaked computer.
 - A monitor connected to that computer. A normal monitor works; an advanced monitor also supports clicking buttons.
 - A wireless modem or Ender modem connected to the computer.
-- Each turtle needs its pickaxe, a wireless or Ender modem, and Mole 1.6.0 or newer.
+- Each turtle needs its pickaxe, a wireless or Ender modem, and Mole 1.6.1 or newer.
 
 Ordinary wireless modems have limited range. Deep mining may lose contact with a surface station. Ender modems remove that distance limit. The station and turtle still need their chunks loaded; this program does not load chunks.
 
@@ -27,10 +27,13 @@ companion
 1. **Connect a monitor.** Place it next to the computer. The companion checks for it and shows a test message. If several are connected, choose one from a numbered list.
 2. **Connect a modem.** Place a wireless or Ender modem next to the computer. Wired modems are identified as unsuitable for contacting wireless turtles. If equipment is missing, attach it and press Enter to retry; `q` exits setup.
 3. **Try the demo now:** run `companion demo`. It displays two fictional turtles and a sample unfamiliar block. Return commands are disabled and demo turtles are never saved.
-4. **Pair a turtle:** start `companion`, then press **P**. Keep the turtle nearby with its modem equipped. The station shows the exact `mole pair <station ID> <code>` command to enter on the turtle.
-5. When the turtle replies, confirm its displayed ID/name with **Y** and choose a friendly name. Pairing is remembered. Press P to add another turtle or deliberately pair an existing one again.
+4. **Pair your first turtle:** the station offers **Pair now? Y/N** when no turtles are paired. Press Y, or use P later. Keep the turtle nearby with its modem equipped.
+5. The station clearly shows **STATION COMPUTER ID** and **PAIRING CODE**, with a five-minute countdown. On the turtle, run `mole companion`, choose **1**, and follow its numbered steps. Enter the displayed ID and six-digit code. Invalid entries and missing modems can be retried.
+6. When the turtle replies, the station shows its ID/name. Press **Y** if it is yours, or **N** to wait for the correct turtle. Choose a friendly name; Enter keeps the current name.
+7. Both devices check the connection. The station shows **Paired - waiting for Mole to run** until you start or resume mining. Use `mole new` or `mole resume` on the turtle.
 
-A pairing code stays open for two minutes. A successful reply will confirm that the turtle detected a wireless modem. If no reply arrives, keep it nearby, check its modem and Mole version, then try again. A missing reply cannot tell us which device or chunk is at fault.
+Press Escape on the station to cancel pairing. If confirmation times out, keep the devices nearby, check chunks and modems, then press P to retry. Existing pairings are retained until a new pairing is confirmed. On an already paired turtle, option **3** in `mole companion` checks the connection; option **1** re-pairs, and option **2** disables reporting.
+
 
 The companion does not automatically replace the computer's startup file. If you want it to open on boot, add `shell.run("companion")` to your own startup program.
 

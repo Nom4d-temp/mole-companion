@@ -4,7 +4,7 @@ This protocol is implemented by optional companion support in Mole 1.6.0+. Use R
 
 ## Pairing
 
-The station displays its computer ID and a six-digit code for 120 seconds. The `mole pair <station ID> <code>` command must check that the turtle has a wireless modem (`isWireless()` true), open it, and send directly to that station:
+The station displays its computer ID and a six-digit code for 300 seconds. The `mole pair <station ID> <code>` command must check that the turtle has a wireless modem (`isWireless()` true), open it, and send directly to that station:
 
 ```lua
 {v=1,kind="pair_hello",code="123456",name="North",wireless=true}
@@ -16,7 +16,11 @@ The station asks for local confirmation and a friendly name before saving the ac
 {v=1,kind="paired",code="123456",station=7,token="opaque pairing token"}
 ```
 
-The turtle must accept this only from the station it is actively pairing with and for its current code, persist the station ID/token, and immediately send status. Replies may be retried for 30 seconds; duplicate replies must not reset a running mining job. Re-pairing is explicit and rotates the token. A station restart loads pairings but marks all turtles as not recently heard until they report again.
+The turtle must accept this only from the station it is actively pairing with and for its current code, persist the station ID/token, then send the readiness confirmation below. Status reports begin when Mole starts or resumes a job. Replies may be retried for 30 seconds; duplicate replies must not reset a running mining job. Re-pairing is explicit and rotates the token. A station restart loads pairings but marks all turtles as not recently heard until they report again.
+
+After saving the pairing, Mole sends `{v=1,kind="pair_ready",token=token,code=code}` directly to the station. The station validates the paired sender/token and replies `{v=1,kind="pair_verified",token=token,code=code}`. The turtle retries readiness every three seconds for up to 15 seconds. This marks the station as paired and waiting for Mole without inventing position or job data. Missing final confirmation retains pairing and directs the user to check the connection.
+
+A local connection check uses `{v=1,kind="ping",token=token,nonce=nonce}` and an authenticated-by-pairing-token `{v=1,kind="pong",token=token,nonce=nonce}` response. As with all v1 traffic, the token is not cryptographic protection against other players.
 
 ## Reports
 

@@ -35,7 +35,7 @@ print('PASS: '..tests..' companion protocol/state tests')
 
 -- Full application smoke tests: no Minecraft required. Render on 39x12 surfaces.
 local function application(events,demo,hardwareNames)
-  local env=setmetatable({},{__index=_G});local files={};local saved={};local writes=0;local redraws=0;local timer=0
+  local env=setmetatable({},{__index=_G});local files={};local saved={};local writes=0;local redraws=0;local timer=0;local packets={}
   local function surface()
     local rows={};local y=1
     return {getSize=function() return 39,12 end,clear=function() redraws=redraws+1;rows={} end,
@@ -53,10 +53,10 @@ local function application(events,demo,hardwareNames)
     hasType=function(n,t) return n=='monitor' and t=='monitor' or (n=='wireless' or n=='wired') and t=='modem' end,
     wrap=function(n) return n=='monitor' and monitor or n=='wired' and wired or wireless end,
     isPresent=function(n) return n~='monitor' or present end}
-  env.rednet={open=function() end,send=function() error('Demo or unpaired station sent a turtle command') end}
+  env.rednet={open=function() end,send=function(id,msg) if msg.kind=='paired' or msg.kind=='pair_verified' or msg.kind=='pong' then packets[#packets+1]=msg;return true end;error('Demo or unpaired station sent a turtle command') end}
   env.keys={left=1,right=2,tab=3,escape=4,up=5,down=6}
   env.os={epoch=function() return 10000 end,getComputerID=function() return 7 end,startTimer=function() timer=timer+1;return timer end,
-    pullEvent=function() local e=table.remove(events,1);assert(e,'App did not close');if e[1]=='detach' then present=false;return 'peripheral_detach','monitor' end;return table.unpack(e) end}
+    pullEvent=function() local e=table.remove(events,1);assert(e,'App did not close');if type(e)=='function' then e=e(getRows(),packets) end;if e[1]=='detach' then present=false;return 'peripheral_detach','monitor' end;return table.unpack(e) end}
   local output={};env.print=function(v) output[#output+1]=v end;env.write=function() end;env.read=function() return 'q' end
   assert(load(source,'companion','t',env))(demo and 'demo' or nil)
   return {writes=writes,redraws=redraws,rows=getRows(),output=table.concat(output,'\n')}
@@ -100,4 +100,28 @@ check('update clean installs even same version',function() local f,closed=mainte
 check('failed download preserves settings',function() local f=maintenanceCase('update',nil,'offline');assert(f.companion=='old program' and f['mole-companion-data/config']) end)
 check('invalid download preserves settings',function() local f,closed=maintenanceCase('update',nil,'invalid');assert(f.companion=='old program' and f['mole-companion-data/config'] and closed) end)
 check('failed replacement restores program in memory without backup',function() local f=maintenanceCase('update',nil,'movefail');assert(f.companion=='old program' and f['mole-companion-data/config'] and not f['companion.update-download']) end)
+print('PASS: '..tests..' total companion checks')
+
+check('pairing acknowledgement distinguishes waiting for Mole',function()
+ local s=state();s.turtles[4].welcome={packet={code='123456'}}
+ local reply=M.control(s,4,{v=1,kind='pair_ready',token='secret-token',code='123456'},5)
+ assert(reply.kind=='pair_verified' and s.turtles[4].awaitingMole and not s.turtles[4].welcome)
+ assert(not M.control(s,9,{v=1,kind='pair_ready',token='secret-token',code='123456'},5))
+end)
+check('connection check validates token and echoes nonce',function()
+ local s=state();local p={v=1,kind='ping',token='secret-token',nonce='abc'}
+ assert(M.control(s,4,p,5).nonce=='abc');p.token='wrong';assert(not M.control(s,4,p,6))
+end)
+check('first-turtle wizard shows separate ID/code and confirms connection',function()
+ local pin
+ local r=application({{'char','y'},function(rows)
+   assert(rows[3]=='STATION COMPUTER ID: 7','Missing labelled station ID')
+   pin=assert(rows[4]:match('^PAIRING CODE: (%d+)$'),'Missing labelled code')
+   return {'rednet_message',21,{v=1,kind='pair_hello',code=pin,wireless=true,name='North'},M.protocol}
+ end,{'char','y'},function(_,packets)
+   local paired=packets[#packets];assert(paired.kind=='paired')
+   return {'rednet_message',21,{v=1,kind='pair_ready',code=pin,token=paired.token},M.protocol}
+ end,{'char','q'}})
+ assert(table.concat(r.rows,'\n'):find('Paired - waiting for Mole to run',1,true),'Pairing looked disconnected before mining')
+end)
 print('PASS: '..tests..' total companion checks')
