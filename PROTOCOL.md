@@ -36,7 +36,7 @@ Status:
 
 ```lua
 {v=1,kind="status",token=token,session=session,seq=1,
- job="stable-quarry-id",phase="Mining",y=18,depth=46,right=3,forward=7,fuel=1450,
+ job="stable-quarry-id",phase="Mining",y=18,depth=46,right=3,forward=7,fuel=1450,inventory=9,
  uncertain=false,detail="Optional next action",progress="15/100 tunnel positions"}
 ```
 
@@ -57,7 +57,7 @@ Unfamiliar block:
  job="stable-quarry-id",block="examplemod:tin_ore",name="Tin ore",count=8}
 ```
 
-`count` is a positive integer **snapshot total** for that ID, not an increment. Announce after successful mining, not merely inspection. Define unfamiliar blocks on the turtle as mined blocks outside its recognised vanilla ore list and configured trash list, without altering what it mines. Readable name is optional. Resend discovery snapshots after station reconnect; retain job totals on the turtle if desired. The station keeps 128 unique IDs and announces a new ID only once per station process. Discovery packets must include the current status `job`; late discoveries from a previous job are ignored.
+`count` is a positive integer **snapshot total** for that ID, not an increment. Announce after successful mining, not merely inspection. Define unfamiliar blocks on the turtle as mined blocks outside its recognised vanilla ore list and configured trash list, without altering what it mines. Readable name is optional. Resend discovery snapshots after station reconnect; retain job totals on the turtle if desired. The station keeps 128 unique IDs. Activity logs announce unfamiliar IDs before digging; discovery snapshots do not duplicate those entries. Discovery packets must include the current status `job`; late discoveries from a previous job are ignored.
 
 ## Safe return requests
 
@@ -81,3 +81,5 @@ Results: `accepted`, `completed` (home and paused), or `rejected`. Repeated requ
 ## Optionality requirements for Mole
 
 Network support must be disabled unless explicitly paired/enabled. No modem, detached modem, missing station, malformed packets, full queues, or send/receive errors may affect movement, refueling, recovery, or job state. Use bounded outgoing queues and isolate listener errors. Network callbacks only set flags; the main mining loop owns physical actions and checkpoint writes. Ctrl+T termination remains local, and reports resume only when Mole runs. Standalone Mole must still pass its complete regression suite without network globals.
+
+Optional status field inventory is the number of occupied turtle slots, an integer from 0 to 16. Older senders may omit it.

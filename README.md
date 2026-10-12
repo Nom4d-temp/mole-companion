@@ -1,4 +1,4 @@
-# Mole Companion 0.3.5
+# Mole Companion 0.3.6
 
 **Keep an eye on your Moles from one place.** Mole Companion turns a CC:Tweaked computer and monitor into a station for watching multiple mining turtles. Choose a turtle to see its status, recent Mole output, and unfamiliar blocks it has mined, or ask it to return home.
 
@@ -26,7 +26,7 @@ This shows the command guide. Use `companion pair` to connect a turtle, or `comp
 
 ## Guided setup
 
-1. **Connect a monitor.** Place it next to the computer. The companion checks for it and shows a test message. If several are connected, choose one from a numbered list.
+1. **Connect a monitor.** A monitor 2 blocks high and 3 blocks wide works well for the status display. Place it next to the computer. The companion checks for it and shows a test message. If several are connected, choose one from a numbered list.
 2. **Connect a modem.** Place a wireless or Ender modem next to the computer. Wired modems are identified as unsuitable for contacting wireless turtles. If equipment is missing, attach it and press Enter to retry; `q` exits setup.
 3. **Try the demo now:** run `companion demo`. It displays two fictional turtles and a sample unfamiliar block. Return commands are disabled and demo turtles are never saved.
 4. **Pair a turtle:** run `companion pair` on the computer. This opens guided pairing immediately. Keep the turtle nearby with its modem equipped.
@@ -97,3 +97,5 @@ These commands work without a monitor or modem and do not change the turtles or 
 ## AI disclosure
 
 Mole Companion was generated with OpenAI's ChatGPT from human requirements and checked with simulated CC:Tweaked tests. Minecraft testing is still needed, especially for wireless range and real modem behavior.
+
+The status display shows fuel and occupied inventory slots (out of 16). When Mole starts mining an unfamiliar block, its block ID appears on its own activity line.

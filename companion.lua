@@ -1,7 +1,7 @@
--- Mole Companion v0.3.5 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.6 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.5'
+local VERSION='0.3.6'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -69,7 +69,7 @@ function M.receive(state,sender,msg,now)
     if t.command and t.command.result=='completed' and (msg.phase=='Mining' or msg.phase=='Returning to work' or msg.phase=='At the chest' or msg.phase=='Returning home' or msg.phase=='Recovering position' or msg.phase=='Emergency escape') then t.command=nil end
     t.job=msg.job;t.statusAt=now;t.awaitingMole=false
     t.status={phase=text(msg.phase,32),y=msg.y,depth=msg.depth,right=msg.right,forward=msg.forward,
-      fuel=msg.fuel,uncertain=msg.uncertain==true,detail=text(msg.detail,160),progress=text(msg.progress,64)}
+      fuel=msg.fuel,inventory=integer(msg.inventory) and msg.inventory>=0 and msg.inventory<=16 and msg.inventory or nil,uncertain=msg.uncertain==true,detail=text(msg.detail,160),progress=text(msg.progress,64)}
   elseif msg.kind=='log' then
     local line=text(msg.text,256);if not line or #line==0 then return false end
     addLog(t,line)
@@ -78,9 +78,8 @@ function M.receive(state,sender,msg,now)
     local id=text(msg.block,120)
     if not id or not id:match('^[%w_.%-]+:[%w_./%-]+$') or not integer(msg.count) or msg.count<1 then return false end
     if not t.blocks[id] and count(t.blocks)>=128 then return false end
-    local first=not t.blocks[id]
     t.blocks[id]={name=text(msg.name,64),count=msg.count}
-    if first then addLog(t,'Unfamiliar block: '..id) end
+
   else
     local c=t.command
     if not c or msg.request~=c.id or (msg.result~='accepted' and msg.result~='completed' and msg.result~='rejected') then return false end
@@ -310,6 +309,7 @@ local function display(target,isMonitor)
       if t.status then
         rows[#rows+1]=t.status.uncertain and 'Pos uncertain' or 'Y '..t.status.y..' D '..t.status.depth
         rows[#rows+1]='Fuel '..t.status.fuel
+        if t.status.inventory then rows[#rows+1]='Slots '..t.status.inventory..'/16' end
       end
       if t.command then rows[#rows+1]='Return '..t.command.result end
       local content={}
@@ -349,7 +349,7 @@ local function display(target,isMonitor)
       local fresh=t.statusAt and now()-t.statusAt<=15
       rows[#rows+1]=t.status.uncertain and 'Position uncertain; recovering.' or (fresh and 'Y ' or 'Last Y ')..t.status.y..' | Depth '..t.status.depth
       rows[#rows+1]='Right '..t.status.right..' | Forward '..t.status.forward
-      rows[#rows+1]=(fresh and 'Fuel: ' or 'Last fuel: ')..t.status.fuel
+      rows[#rows+1]=(fresh and 'Fuel: ' or 'Last fuel: ')..t.status.fuel..(t.status.inventory and ' | Slots: '..t.status.inventory..'/16' or '')
       if t.status.progress then rows[#rows+1]=t.status.progress end
     end
     if t.command then rows[#rows+1]='Return: '..t.command.result end
