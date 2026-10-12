@@ -99,7 +99,7 @@ These commands work without a monitor or modem and do not change the turtles or 
 
 Mole Companion was generated with OpenAI's ChatGPT from human requirements and checked with simulated CC:Tweaked tests. Minecraft testing is still needed, especially for wireless range and real modem behavior.
 
-The status display shows fuel and occupied inventory slots (out of 16). When Mole starts mining an unfamiliar block, its block ID appears on its own activity line.
+The status display shows fuel and occupied inventory slots (out of 16). When Mole starts mining an unfamiliar block, the unfamiliar-block label and block ID appear together in one activity entry. Long entries wrap to fit the screen.
 
 Run `companion unpair` to choose a turtle by name and computer ID, then confirm with `yes`. Other pairings are kept. To clear the turtle’s saved station too, use option **2** in `mole companion` on that turtle.
 
