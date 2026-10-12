@@ -1,4 +1,4 @@
-# Mole Companion 0.3.6
+# Mole Companion 0.3.7
 
 **Keep an eye on your Moles from one place.** Mole Companion turns a CC:Tweaked computer and monitor into a station for watching multiple mining turtles. Choose a turtle to see its status, recent Mole output, and unfamiliar blocks it has mined, or ask it to return home.
 
@@ -48,7 +48,8 @@ The companion does not automatically replace the computer's startup file. If you
 | `companion pair` | Open guided turtle pairing |
 | `companion demo` | Preview with simulated data |
 | `companion help` | Show the short control list |
-| `companion update` | Install the latest program and clear all station settings |
+| `companion update` | Update the program, keeping pairings and settings |
+| `companion unpair` | Choose a turtle and remove its station pairing |
 | `companion remove` | Fully delete the program and station data after confirmation |
 | Left / Right / Tab | Select a turtle |
 | R, then Y | Ask the selected turtle to return home |
@@ -88,14 +89,27 @@ Pairing prevents accidental control of the wrong turtle, but Rednet is not encry
 
 ## Update or remove
 
-Run `companion update` for a **clean install** of the latest GitHub program. Successful updates erase all pairings, names, and settings, even if the version is unchanged. No old program backup is kept. Run `companion pair` afterward to pair your turtles again, then `companion start` to open the display. Failed or invalid downloads leave the current installation intact.
+Run `companion update` to install the latest program while keeping turtle pairings, names, and settings. No old program backup is kept. Failed or invalid downloads leave the current installation intact.
 
 Run `companion remove`, then type `yes`, to delete the program and all its saved data without a backup. Any other answer cancels. If your own startup program launches Companion, remove that launch line yourself; unrelated startup files are kept.
 
-These commands work without a monitor or modem and do not change the turtles or their quarry jobs. After an update or removal, a turtle may still report to its former station; re-pair it or disable reporting with `mole companion`.
+These commands work without a monitor or modem and do not change the turtles or their quarry jobs. After unpairing or removal, a turtle may still report to its former station; re-pair it or disable reporting with `mole companion`.
 
 ## AI disclosure
 
 Mole Companion was generated with OpenAI's ChatGPT from human requirements and checked with simulated CC:Tweaked tests. Minecraft testing is still needed, especially for wireless range and real modem behavior.
 
 The status display shows fuel and occupied inventory slots (out of 16). When Mole starts mining an unfamiliar block, its block ID appears on its own activity line.
+
+Run `companion unpair` to choose a turtle by name and computer ID, then confirm with `yes`. Other pairings are kept. To clear the turtle’s saved station too, use option **2** in `mole companion` on that turtle.
+
+**Upgrading from 0.3.6 or earlier:** the old updater still clears pairings. To keep them for this upgrade, close the display and download the new program first:
+```
+wget https://raw.githubusercontent.com/Nom4d-temp/mole-companion/main/companion.lua companion-new
+```
+Only after the download succeeds, replace the program:
+```
+delete companion
+move companion-new companion
+```
+Future updates can use `companion update` and will keep pairings.

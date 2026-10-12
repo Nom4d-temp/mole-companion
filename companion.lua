@@ -1,7 +1,7 @@
--- Mole Companion v0.3.6 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.7 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.6'
+local VERSION='0.3.7'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -161,7 +161,7 @@ local function maintenance()
     return
   end
   if not http or not http.get then print('Downloads disabled. Ask server owner.');return end
-  print('Downloading a clean Companion install.')
+  print('Downloading Companion update.')
   local response,why,failed=http.get('https://raw.githubusercontent.com/Nom4d-temp/mole-companion/main/companion.lua?update='..os.epoch('utc'),
     {['Cache-Control']='no-cache',['Pragma']='no-cache'})
   if not response then if failed then failed.close() end;print('Download failed. Current install kept.');return end
@@ -176,17 +176,16 @@ local function maintenance()
     local h=assert(fs.open(temp,'w'));h.write(source);h.close()
     h=assert(fs.open(temp,'r'));local saved=h.readAll();h.close();assert(saved==source,'Saved download did not match')
     fs.delete(program);fs.move(temp,program);installed=true
-    fs.delete(ROOT)
     if fs.exists(program..'.update-backup') then fs.delete(program..'.update-backup') end
   end)
   if not success then
     if not installed and original then pcall(function() local h=assert(fs.open(program,'w'));h.write(original);h.close() end) end
     if fs.exists(temp) then pcall(fs.delete,temp) end
-    print(installed and 'Program updated; settings cleanup failed.' or 'Install failed; check program file before retrying.')
+    print(installed and 'Program updated; cleanup failed.' or 'Install failed; check program file before retrying.')
     return
   end
-  print('Companion updated. Settings cleared.')
-  print('Run companion to set up and pair again.')
+  print('Companion updated. Pairings kept.')
+  print('Run companion start for the display.')
 end
 if argv[1]=='remove' or argv[1]=='update' then
   local ok=pcall(maintenance)
@@ -197,7 +196,8 @@ if not argv[1] or argv[1]=='help' then
   print('Mole Companion '..VERSION)
   print('companion start   Open turtle display')
   print('companion pair    Pair a turtle')
-  print('companion update  Clean install')
+  print('companion unpair  Remove a pairing')
+  print('companion update  Update program')
   print('companion remove  Delete program/data')
   print('companion demo    Preview fake data')
   print('companion help    Show this guide')
@@ -205,7 +205,7 @@ if not argv[1] or argv[1]=='help' then
   print('D: blocks  L: log  Q: close')
   return
 end
-if argv[1]~='start' and argv[1]~='pair' and argv[1]~='demo' then
+if argv[1]~='start' and argv[1]~='pair' and argv[1]~='demo' and argv[1]~='unpair' then
   print('Unknown command. Use companion help.');return
 end
 local function readConfig(path)
@@ -232,6 +232,29 @@ local function save()
 end
 local function question(prompt)
   write(prompt..' ');return read():match('^%s*(.-)%s*$')
+end
+if argv[1]=='unpair' then
+  if #state.order==0 then print('No paired turtles.');return end
+  print('Choose a turtle to unpair:')
+  for i,id in ipairs(state.order) do print(i..'. '..state.turtles[id].name..' (#'..id..')') end
+  local selected
+  while not selected do
+    local answer=question('Number (q cancels):')
+    if answer:lower()=='q' then print('Unpair cancelled.');return end
+    local index=tonumber(answer)
+    if index and index%1==0 then selected=state.order[index] end
+    if not selected then print('Choose a number from the list.') end
+  end
+  local t=state.turtles[selected]
+  print('Unpair '..t.name..' (#'..selected..')?')
+  if question('Are you sure? yes/no:'):lower()~='yes' then print('Unpair cancelled.');return end
+  state.turtles[selected]=nil
+  for i,id in ipairs(state.order) do if id==selected then table.remove(state.order,i);break end end
+  local ok=pcall(save)
+  if not ok then print('Could not save. Check pairing files.');return end
+  print('Turtle unpaired from this station.')
+  print('On turtle: mole companion, option 2.')
+  return
 end
 local function choose(kind,predicate,prompt)
   while true do

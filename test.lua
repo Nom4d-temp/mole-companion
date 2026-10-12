@@ -34,7 +34,7 @@ check('control characters sanitized',function() assert(M.wrap('a\nb',39)[1]=='a 
 print('PASS: '..tests..' companion protocol/state tests')
 
 -- Full application smoke tests: no Minecraft required. Render on 39x12 surfaces.
-local function application(events,demo,hardwareNames,command,smallMonitor)
+local function application(events,demo,hardwareNames,command,smallMonitor,unpairCase)
   local env=setmetatable({},{__index=_G});local files={};local saved={};local writes=0;local redraws=0;local timer=0;local packets={}
   local function surface(small)
     local w,h=small and 7 or 39,small and 5 or 12
@@ -49,6 +49,7 @@ local function application(events,demo,hardwareNames,command,smallMonitor)
     move=function(a,b) assert(files[a] and not files[b]);files[b]=files[a];files[a]=nil end,
     open=function(p,mode) return {readAll=function() return files[p] end,write=function(v) writes=writes+1;files[p]=v end,close=function() end} end}
   env.textutils={serialize=function(v) saved[#saved+1]=v;return tostring(#saved) end,unserialize=function(v) return saved[tonumber(v)] end}
+  if unpairCase then saved[1]={version=1,pairs={{id=4,name='Alpha',token='alpha-token'},{id=8,name='Beta',token='beta-token'}}};files['mole-companion-data/config']='1' end
   local wireless={isWireless=function() return true end};local wired={isWireless=function() return false end}
   env.peripheral={getNames=function() return hardwareNames or {'monitor','wireless'} end,
     hasType=function(n,t) return n=='monitor' and t=='monitor' or (n=='wireless' or n=='wired') and t=='modem' end,
@@ -58,11 +59,11 @@ local function application(events,demo,hardwareNames,command,smallMonitor)
   env.keys={left=1,right=2,tab=3,escape=4,up=5,down=6}
   env.os={epoch=function() return 10000 end,getComputerID=function() return 7 end,startTimer=function() timer=timer+1;return timer end,
     pullEvent=function() local e=table.remove(events,1);assert(e,'App did not close');if type(e)=='function' then e=e(getRows(),packets) end;if e[1]=='detach' then present=false;return 'peripheral_detach','monitor' end;return table.unpack(e) end}
-  local output={};env.print=function(v) output[#output+1]=v end;env.write=function() end;env.read=function() return 'q' end
+  local output={};env.print=function(v) output[#output+1]=v end;env.write=function() end;env.read=function() return unpairCase and table.remove(unpairCase,1) or 'q' end
   local argument=command or (demo and 'demo' or 'start')
   if command=='overview' then argument=nil end
   assert(load(source,'companion','t',env))(argument)
-  return {writes=writes,redraws=redraws,rows=getRows(),output=table.concat(output,'\n')}
+  return {config=files['mole-companion-data/config'] and saved[tonumber(files['mole-companion-data/config'])],writes=writes,redraws=redraws,rows=getRows(),output=table.concat(output,'\n')}
 end
 check('station starts and quits without touching turtles',function() local r=application({{'char','q'}});assert(r.writes>0 and r.redraws>0) end)
 check('demo writes no pairing configuration and sends no commands',function() local r=application({{'char','r'},{'char','d'},{'key',2},{'key',5},{'char','p'},{'char','q'}},true);assert(r.writes==0) end)
@@ -99,7 +100,7 @@ local function maintenanceCase(command,reply,mode)
 end
 check('remove deletes program and settings without backup',function() local f=maintenanceCase('remove');assert(not f.companion and not f['mole-companion-data/config'] and not f['mole-companion-data/config.backup']) end)
 check('remove cancellation preserves installation',function() local f=maintenanceCase('remove','no');assert(f.companion=='old program' and f['mole-companion-data/config']) end)
-check('update clean installs even same version',function() local f,closed=maintenanceCase('update');assert(f.companion==source and not f['mole-companion-data/config'] and not f['companion.update-download'] and not f['companion.update-backup'] and closed) end)
+check('update preserves pairings even same version',function() local f,closed=maintenanceCase('update');assert(f.companion==source and f['mole-companion-data/config']=='old pairing' and f['mole-companion-data/config.backup']=='old backup' and not f['companion.update-download'] and not f['companion.update-backup'] and closed) end)
 check('failed download preserves settings',function() local f=maintenanceCase('update',nil,'offline');assert(f.companion=='old program' and f['mole-companion-data/config']) end)
 check('invalid download preserves settings',function() local f,closed=maintenanceCase('update',nil,'invalid');assert(f.companion=='old program' and f['mole-companion-data/config'] and closed) end)
 check('failed replacement restores program in memory without backup',function() local f=maintenanceCase('update',nil,'movefail');assert(f.companion=='old program' and f['mole-companion-data/config'] and not f['companion.update-download']) end)
@@ -210,5 +211,20 @@ print('PASS: '..tests..' total companion checks')
 check('inventory occupancy is bounded and optional',function()
  local s=state();local m=packet();m.inventory=9;assert(M.receive(s,4,m,1));assert(s.turtles[4].status.inventory==9)
  m.seq=2;m.inventory=17;assert(M.receive(s,4,m,2));assert(s.turtles[4].status.inventory==nil)
+end)
+print('PASS: '..tests..' total companion checks')
+
+check('unpair removes only selected turtle without hardware',function()
+ local r=application({},false,{},'unpair',false,{'99','2','yes'})
+ assert(#r.config.pairs==1 and r.config.pairs[1].id==4 and r.config.pairs[1].token=='alpha-token')
+ assert(r.redraws==0 and r.output:find('Beta (#8)',1,true))
+end)
+check('unpair cancellation keeps both turtles',function()
+ for _,answers in ipairs({{'q'},{'1','no'}}) do
+  local r=application({},false,{},'unpair',false,answers);assert(#r.config.pairs==2 and r.writes==0)
+ end
+end)
+check('unpair with no turtles gives a clear message',function()
+ local r=application({},false,{},'unpair');assert(r.output:find('No paired turtles.',1,true) and r.writes==0)
 end)
 print('PASS: '..tests..' total companion checks')
