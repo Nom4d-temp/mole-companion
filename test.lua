@@ -229,10 +229,10 @@ check('unpair with no turtles gives a clear message',function()
 end)
 print('PASS: '..tests..' total companion checks')
 
-check('status separates connection and activity and groups coordinates',function()
+check('status combines connection and activity and groups coordinates',function()
  application({function(rows)
-  assert(rows[3]=='Connected' and rows[4]=='Activity: Mining')
-  assert(rows[5]=='Y 18 | Depth 46 | Forward 7 | Right 3' or rows[5]=='Y 18 | D 46 | F 7 | R 3')
+  assert(rows[3]=='Connected | Activity: Mining')
+  assert(rows[4]=='Y 18 | Depth 46 | Forward 7 | Right 3' or rows[4]=='Y 18 | D 46 | F 7 | R 3')
   return {'char','q'}
  end},true)
 end)
@@ -241,6 +241,14 @@ print('PASS: '..tests..' total companion checks')
 check('running station answers paired turtle connection check',function()
  application({{'rednet_message',4,{v=1,kind='ping',token='alpha-token',nonce='check-123'},'mole-companion/1'},function(rows,packets)
   local reply=packets[#packets];assert(reply and reply.kind=='pong' and reply.token=='alpha-token' and reply.nonce=='check-123')
+  return {'char','q'}
+ end},false,nil,'start',false,{})
+end)
+print('PASS: '..tests..' total companion checks')
+
+check('fuel slots and tunnels share one status line',function()
+ application({{'rednet_message',4,{v=1,kind='status',session='layout',seq=1,token='alpha-token',job='job',phase='Mining',y=18,depth=46,right=3,forward=7,fuel=1450,inventory=9,progress='Tunnels: 32/100'},'mole-companion/1'},function(rows)
+  assert(rows[5]=='Fuel 1450 S 9/16 T 32/100')
   return {'char','q'}
  end},false,nil,'start',false,{})
 end)

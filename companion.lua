@@ -1,7 +1,7 @@
--- Mole Companion v0.3.10 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.11 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.10'
+local VERSION='0.3.11'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -369,14 +369,18 @@ local function display(target,isMonitor)
     if t.awaitingMole then rows[#rows+1]='Last connection check: '..(age or 0)..'s ago' end
     if t.status then
       local fresh=t.statusAt and now()-t.statusAt<=15
-      rows[#rows+1]=(fresh and 'Activity: ' or 'Last activity: ')..t.status.phase
+      local activity=(fresh and 'Activity: ' or 'Last activity: ')..t.status.phase
+      local combined=rows[#rows]..' | '..activity
+      if #combined>width then combined=(M.online(t,now()) and 'Connected' or 'No contact')..' | '..(fresh and 'Activity: ' or 'Last: ')..t.status.phase end
+      rows[#rows]=combined
       local prefix=fresh and 'Y ' or 'Last Y '
       local position=prefix..t.status.y..' | Depth '..t.status.depth..' | Forward '..t.status.forward..' | Right '..t.status.right
       if #position>width then position=prefix..t.status.y..' | D '..t.status.depth..' | F '..t.status.forward..' | R '..t.status.right end
       rows[#rows+1]=position
       if t.status.uncertain then rows[#rows+1]='Position uncertain; recovering.' end
-      if t.status.progress then rows[#rows+1]=t.status.progress end
-      rows[#rows+1]=(fresh and 'Fuel: ' or 'Last fuel: ')..t.status.fuel..(t.status.inventory and ' | Slots: '..t.status.inventory..'/16' or '')
+      local resources=(fresh and 'Fuel: ' or 'Last fuel: ')..t.status.fuel..(t.status.inventory and ' | Slots: '..t.status.inventory..'/16' or '')..(t.status.progress and ' | '..t.status.progress or '')
+      if #resources>width then resources=(fresh and 'Fuel ' or 'Last fuel ')..t.status.fuel..(t.status.inventory and ' S '..t.status.inventory..'/16' or '')..(t.status.progress and ' '..t.status.progress:gsub('Tunnels: ','T ') or '') end
+      rows[#rows+1]=resources
     end
     if t.command then rows[#rows+1]='Return: '..t.command.result end
   else
