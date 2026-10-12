@@ -237,3 +237,11 @@ check('status separates connection and activity and groups coordinates',function
  end},true)
 end)
 print('PASS: '..tests..' total companion checks')
+
+check('running station answers paired turtle connection check',function()
+ application({{'rednet_message',4,{v=1,kind='ping',token='alpha-token',nonce='check-123'},'mole-companion/1'},function(rows,packets)
+  local reply=packets[#packets];assert(reply and reply.kind=='pong' and reply.token=='alpha-token' and reply.nonce=='check-123')
+  return {'char','q'}
+ end},false,nil,'start',false,{})
+end)
+print('PASS: '..tests..' total companion checks')

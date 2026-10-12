@@ -1,4 +1,4 @@
-# Mole Companion 0.3.9
+# Mole Companion 0.3.10
 
 **Keep an eye on your Moles from one place.** Mole Companion turns a CC:Tweaked computer and monitor into a station for watching multiple mining turtles. Choose a turtle to see its status, recent Mole output, and unfamiliar blocks it has mined, or ask it to return home.
 
@@ -34,7 +34,7 @@ This shows the command guide. Use `companion pair` to connect a turtle, or `comp
 6. When the turtle replies, the station shows its ID/name. Press **Y** if it is yours, or **N** to wait for the correct turtle. Choose a friendly name; Enter keeps the current name.
 7. Both devices confirm the connection. Pairing closes back to the computer command prompt. Run `companion start` to open the display; it shows **Paired - waiting for Mole to run** until you use `mole new` or `mole resume` on the turtle.
 
-Press Escape on the station to cancel pairing. If confirmation times out, keep the devices nearby, check chunks and modems, then run `companion pair` to retry. Existing pairings are retained until a new pairing is confirmed. On an already paired turtle, option **3** in `mole companion` checks the connection; option **1** re-pairs, and option **2** unpairs the turtle, and option **4** disables reporting.
+Press Escape on the station to cancel pairing. If confirmation times out, keep the devices nearby, check chunks and modems, then run `companion pair` to retry. Existing pairings are retained until a new pairing is confirmed. On an already paired turtle, option **3** in `mole companion` checks the connection while `companion start` is running on the station; option **1** re-pairs, and option **2** unpairs the turtle, and option **4** disables reporting.
 
 
 The companion does not automatically replace the computer's startup file. If you want it to open on boot, add `shell.run("companion", "start")` to your own startup program.

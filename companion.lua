@@ -1,7 +1,7 @@
--- Mole Companion v0.3.9 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.10 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.9'
+local VERSION='0.3.10'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -359,8 +359,7 @@ local function display(target,isMonitor)
       rows[#rows+1]='Turtle #'..pairConfirm.id..': '..pairConfirm.name
       rows[#rows+1]='Is this yours? Y=yes N=no Esc=cancel'
     else
-      rows[#rows+1]='Turtle: keep pickaxe + wireless modem'
-      rows[#rows+1]='Run \'mole companion\'; choose 1.'
+      for _,part in ipairs(M.wrap("On your turtle, type 'mole companion'; choose option 1. pair/re-pair.",width)) do rows[#rows+1]=part end
       rows[#rows+1]='Enter ID + code above. Esc: cancel'
     end
   elseif t then
