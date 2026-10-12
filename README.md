@@ -1,2 +1,84 @@
-# mole-companion
-A companion program for mole, to monitor your turtles
+# Mole Companion 0.1.0
+
+**Keep an eye on your Moles from one place.** Mole Companion turns a CC:Tweaked computer and monitor into a station for watching multiple mining turtles. Choose a turtle to see its status, recent Mole output, and unfamiliar blocks it has mined, or ask it to return home.
+
+**This is the companion-side preview. The current Mole turtle program cannot connect yet.** The next development step adds optional wireless reporting and pairing to Mole. This download does not modify Mole or your turtles. You can check station hardware and try the demo now.
+
+## What you need
+
+- A normal or advanced CC:Tweaked computer.
+- A monitor connected to that computer. A normal monitor works; an advanced monitor also supports clicking buttons.
+- A wireless modem or Ender modem connected to the computer.
+- Later, each turtle needs its pickaxe, a wireless or Ender modem, and the upcoming compatible Mole update.
+
+Ordinary wireless modems have limited range. Deep mining may lose contact with a surface station. Ender modems remove that distance limit. The station and turtle still need their chunks loaded; this program does not load chunks.
+
+## Download and start
+
+After the files are uploaded to `Nom4d-temp/mole-companion`, open the computer and type:
+
+```text
+wget https://raw.githubusercontent.com/Nom4d-temp/mole-companion/main/companion.lua companion
+companion
+```
+
+Until that repository is available, copy `companion.lua` from this download onto the computer and save it as `companion`.
+
+## Guided setup
+
+1. **Connect a monitor.** Place it next to the computer. The companion checks for it and shows a test message. If several are connected, choose one from a numbered list.
+2. **Connect a modem.** Place a wireless or Ender modem next to the computer. Wired modems are identified as unsuitable for contacting wireless turtles. If equipment is missing, attach it and press Enter to retry; `q` exits setup.
+3. **Try the demo now:** run `companion demo`. It displays two fictional turtles and a sample unfamiliar block. Return commands are disabled and demo turtles are never saved.
+4. **Pair later, after Mole gains support:** start `companion`, then press **P**. Keep the turtle nearby with its modem equipped. The station shows the exact `mole pair <station ID> <code>` command to enter on the turtle. This command is not available in current Mole.
+5. When the turtle replies, confirm its displayed ID/name with **Y** and choose a friendly name. Pairing is remembered. Press P to add another turtle or deliberately pair an existing one again.
+
+A pairing code stays open for two minutes. A successful reply will confirm that the turtle detected a wireless modem. If no reply arrives, keep it nearby, check its modem and Mole version, then try again. A missing reply cannot tell us which device or chunk is at fault.
+
+The companion does not automatically replace the computer's startup file. If you want it to open on boot, add `shell.run("companion")` to your own startup program.
+
+## Everyday controls
+
+| Key or command | Action |
+| --- | --- |
+| `companion` | Open the station and check hardware |
+| `companion demo` | Preview with simulated data |
+| `companion help` | Show the short control list |
+| Left / Right / Tab | Select a turtle |
+| R, then Y | Ask the selected turtle to return home |
+| D | Show unfamiliar block discoveries |
+| L | Show recent Mole messages |
+| Up / Down | Scroll the current list |
+| P | Pair another turtle |
+| Escape | Cancel pairing or a return confirmation |
+| Q | Close the companion; turtles keep working |
+
+Advanced monitors have **Prev**, **Next**, **Return**, and **Pair** buttons. Confirm returns with Y on the computer. A normal monitor uses the computer's keyboard controls.
+
+The screen adapts to its size. If it is too small, add monitor blocks. Computer controls remain available if the monitor is detached. Reattach the same monitor/modem to reconnect; restart the companion to select equipment with a different peripheral name.
+
+## What the station tells you
+
+- Current job state, fuel, world Y, depth, and distance right/forward from the starting chest. This is Mole's tracked position, not GPS. During recovery it is labelled uncertain.
+- Recent Mole messages, wrapped for your monitor. This is a Mole activity log, not a complete remote CraftOS terminal or keyboard.
+- Each unfamiliar block's ID, optional readable name, and count reported by the turtle. Discoveries do not change mining decisions.
+- Return request state: sent, accepted, completed, rejected, or unconfirmed. “Sent” alone does not mean the turtle received it. An unconfirmed request is not left queued indefinitely for a later reconnection.
+- Time since the last message when contact is lost. Last-known data remains visible; it is not live position.
+
+The companion retains 80 recent messages and up to 128 distinct discoveries per turtle/job in memory. It supports up to 32 paired turtles. Pairings and names persist; live status/logs/discoveries are refreshed by the turtle after station restart. In the forthcoming integration, a returning turtle will finish its current action safely before following Mole's usual return routine. Recovery and emergency escape remain in charge when a normal return cannot proceed.
+
+## If something needs attention
+
+| Problem | What to do |
+| --- | --- |
+| No monitor / modem | Attach the requested peripheral, then press Enter |
+| Wired modem detected | Use a wireless or Ender modem instead |
+| No turtle reply | Current Mole has no companion support yet; after updating, check both chunks, modems, and range |
+| No recent contact | Last-known data is displayed; check loading and range before sending a return |
+| Return unconfirmed | Check connection and turtle status; do not assume it is returning |
+| Pairing file damaged | Existing files are kept. Rename `mole-companion-data`, start again, and pair turtles again |
+
+Pairing prevents accidental control of the wrong turtle, but Rednet is not encrypted or authenticated against other players. This first version is for trusted worlds/servers. Do not treat its pairing code/token as protection against a malicious player.
+
+## AI disclosure
+
+Mole Companion was generated with OpenAI's ChatGPT from human requirements and checked with simulated CC:Tweaked tests. Minecraft testing is still needed, especially once turtle-side integration is added.

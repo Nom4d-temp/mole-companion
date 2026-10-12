@@ -1,0 +1,342 @@
+-- Mole Companion v0.1.0 - optional CC:Tweaked monitoring station.
+-- Mole turtle support is a separate, forthcoming update. No turtle is modified here.
+local argv={...}
+local VERSION='0.1.0'
+local PROTOCOL='mole-companion/1'
+local M={protocol=PROTOCOL}
+local function text(v,limit)
+  if type(v)~='string' then return nil end
+  return v:gsub('[%c]',' '):sub(1,limit or 160)
+end
+local function number(v) return type(v)=='number' and v==v and math.abs(v)~=math.huge end
+local function integer(v) return number(v) and v%1==0 end
+local function count(t) local n=0;for _ in pairs(t) do n=n+1 end;return n end
+function M.new(pairs)
+  local state={turtles={},order={},selected=1,serial=0}
+  for _,p in ipairs(pairs or {}) do
+    if integer(p.id) and p.id>=0 and text(p.token,96) and #p.token>=8 and not state.turtles[p.id] and #state.order<32 then
+      state.turtles[p.id]={id=p.id,name=text(p.name,32) or 'Turtle '..p.id,token=p.token,logs={},blocks={},lastSeen=nil,sequences={}}
+      state.order[#state.order+1]=p.id
+    end
+  end
+  return state
+end
+function M.pairs(state)
+  local result={}
+  for _,id in ipairs(state.order) do local t=state.turtles[id];result[#result+1]={id=id,name=t.name,token=t.token} end
+  return result
+end
+function M.add(state,id,name,token)
+  if not integer(id) or id<0 or state.turtles[id] or #state.order>=32 or not text(token,96) or #token<8 then return false end
+  state.turtles[id]={id=id,name=text(name,32) or 'Turtle '..id,token=token,logs={},blocks={},sequences={}}
+  state.order[#state.order+1]=id;state.selected=#state.order;return true
+end
+function M.repair(state,id,name,token)
+  local t=state.turtles[id]
+  if not t then return M.add(state,id,name,token) end
+  if not text(token,96) or #token<8 then return false end
+  t.token=token;t.name=text(name,32) or t.name;t.session=nil;t.retired={};t.sequences={};t.lastSeen=nil;t.command=nil
+  return true
+end
+local function addLog(t,line)
+  t.logs[#t.logs+1]=line
+  if #t.logs>80 then table.remove(t.logs,1) end
+end
+function M.receive(state,sender,msg,now)
+  local t=state.turtles[sender]
+  if not t or type(msg)~='table' or msg.v~=1 or msg.token~=t.token then return false end
+  if not text(msg.session,48) or #msg.session==0 or #msg.session>48 or not integer(msg.seq) or msg.seq<1 then return false end
+  if msg.kind~='status' and msg.kind~='log' and msg.kind~='discovery' and msg.kind~='ack' then return false end
+  if msg.kind=='status' and (not text(msg.job,64) or #msg.job==0 or #msg.job>64 or not text(msg.phase,32) or not number(msg.y) or not number(msg.depth) or not number(msg.right) or not number(msg.forward)
+    or not (number(msg.fuel) and msg.fuel>=0 or msg.fuel=='unlimited')) then return false end
+  -- A new boot session begins with status. Old packets cannot switch it back.
+  if t.session~=msg.session then
+    if msg.kind~='status' then return false end
+    t.retired=t.retired or {}
+    if t.retired[msg.session] then return false end
+    if t.session then
+      if count(t.retired)>=32 then t.status.detail='Re-pair this turtle to refresh its connection.';return false end
+      t.retired[t.session]=true
+    end
+    t.session=msg.session;t.sequences={}
+  end
+  if msg.seq<=(t.sequences[msg.kind] or 0) then return false end
+  if msg.kind=='status' then
+    if not text(msg.phase,32) or not number(msg.y) or not number(msg.depth) or not number(msg.right) or not number(msg.forward) then return false end
+    if not (number(msg.fuel) and msg.fuel>=0 or msg.fuel=='unlimited') then return false end
+    if t.job and t.job~=msg.job then t.blocks={};t.command=nil;addLog(t,'New quarry started.') end
+    t.job=msg.job;t.statusAt=now
+    t.status={phase=text(msg.phase,32),y=msg.y,depth=msg.depth,right=msg.right,forward=msg.forward,
+      fuel=msg.fuel,uncertain=msg.uncertain==true,detail=text(msg.detail,160),progress=text(msg.progress,64)}
+  elseif msg.kind=='log' then
+    local line=text(msg.text,256);if not line or #line==0 then return false end
+    addLog(t,line)
+  elseif msg.kind=='discovery' then
+    if msg.job~=t.job then return false end
+    local id=text(msg.block,120)
+    if not id or not id:match('^[%w_.%-]+:[%w_./%-]+$') or not integer(msg.count) or msg.count<1 then return false end
+    if not t.blocks[id] and count(t.blocks)>=128 then return false end
+    local first=not t.blocks[id]
+    t.blocks[id]={name=text(msg.name,64),count=msg.count}
+    if first then addLog(t,'Unfamiliar block: '..id) end
+  else
+    local c=t.command
+    if not c or msg.request~=c.id or (msg.result~='accepted' and msg.result~='completed' and msg.result~='rejected') then return false end
+    if c.result=='completed' or c.result=='rejected' then return false end
+    c.result=msg.result;c.detail=text(msg.detail,160);c.changed=now
+    addLog(t,msg.result=='accepted' and 'Return accepted by turtle.' or msg.result=='completed' and 'Home and paused.' or 'Return rejected: '..(c.detail or 'See turtle status.'))
+  end
+  t.sequences[msg.kind]=msg.seq;t.lastSeen=now;return true
+end
+function M.online(t,now) return t.lastSeen~=nil and now-t.lastSeen<=15 end
+function M.command(state,id,now)
+  local t=state.turtles[id]
+  if not t or not M.online(t,now) or not t.status then return nil,'No recent turtle report. Return was not sent.' end
+  if t.command and (t.command.result=='sent' or t.command.result=='accepted') then return nil,'A return request is already pending.' end
+  state.serial=state.serial+1
+  local request=tostring(now)..'-'..state.serial
+  t.command={id=request,result='sent',sent=now,attempts=0,changed=now}
+  return {v=1,kind='command',action='return',token=t.token,request=request,session=t.session}
+end
+function M.tick(state,now,send)
+  for _,id in ipairs(state.order) do
+    local t=state.turtles[id];local c=t.command
+    if t.welcome then
+      if t.lastSeen or now>=t.welcome.expires then t.welcome=nil
+      elseif now-t.welcome.sent>=3 then send(id,t.welcome.packet);t.welcome.sent=now end
+    end
+    if c and c.result=='sent' then
+      if now-c.sent>=12 then c.result='unconfirmed';addLog(t,'Return not confirmed. Check connection before retrying.')
+      elseif c.attempts<3 and now-c.changed>=3 then
+        send(id,{v=1,kind='command',action='return',token=t.token,request=c.id,session=t.session})
+        c.attempts=c.attempts+1;c.changed=now
+      end
+    end
+  end
+end
+function M.wrap(line,width)
+  local out={};line=text(line,256) or '';width=math.max(1,width)
+  repeat
+    if #line<=width then out[#out+1]=line;break end
+    local cut=width
+    for i=width,math.max(1,width-16),-1 do if line:sub(i,i)==' ' then cut=i;break end end
+    out[#out+1]=line:sub(1,cut);line=line:sub(cut+1):gsub('^ +','')
+  until false
+  return out
+end
+if argv[1]=='--test' then return M end
+
+local ROOT='mole-companion-data'
+local function now() return os.epoch('utc')/1000 end
+local function readConfig(path)
+  if not fs.exists(path) then return nil end
+  local h=fs.open(path,'r');if not h then return nil end
+  local raw=h.readAll();h.close();local ok,v=pcall(textutils.unserialize,raw)
+  if ok and type(v)=='table' and v.version==1 and type(v.pairs)=='table' then return v end
+end
+local config=readConfig(ROOT..'/config') or readConfig(ROOT..'/config.backup')
+if not config and (fs.exists(ROOT..'/config') or fs.exists(ROOT..'/config.backup')) then
+  print('Pairing file is damaged. Files kept.');print('Rename mole-companion-data, then retry.');return
+end
+config=config or {version=1,pairs={}}
+local state=M.new(config.pairs)
+local function save()
+  fs.makeDir(ROOT);config.pairs=M.pairs(state)
+  local h=assert(fs.open(ROOT..'/config.new','w'),'Cannot save companion settings');h.write(textutils.serialize(config));h.close()
+  assert(readConfig(ROOT..'/config.new'),'Settings check failed')
+  if fs.exists(ROOT..'/config') then
+    if fs.exists(ROOT..'/config.backup') then fs.delete(ROOT..'/config.backup') end
+    fs.move(ROOT..'/config',ROOT..'/config.backup')
+  end
+  fs.move(ROOT..'/config.new',ROOT..'/config')
+end
+local function question(prompt)
+  write(prompt..' ');return read():match('^%s*(.-)%s*$')
+end
+local function choose(kind,predicate,prompt)
+  while true do
+    local choices={}
+    for _,name in ipairs(peripheral.getNames()) do
+      if peripheral.hasType(name,kind) then local p=peripheral.wrap(name);if not predicate or predicate(p) then choices[#choices+1]=name end end
+    end
+    table.sort(choices)
+    if #choices==1 then return choices[1] end
+    if #choices>1 then
+      print('Choose a '..kind..':')
+      for i,name in ipairs(choices) do print(i..' '..name) end
+      local raw=question('Number, or q to exit:');if raw:lower()=='q' then return nil end
+      local n=tonumber(raw);if n and choices[n] then return choices[n] end
+    else
+      print(prompt);print('Attach it, then press Enter to retry.')
+      if question('Enter to retry, q to exit:'):lower()=='q' then return nil end
+    end
+  end
+end
+local function wireless(p) local ok,v=pcall(p.isWireless);return ok and v==true end
+local monitorName,modemName,monitor
+local function hardware()
+  print('Mole Companion '..VERSION)
+  print('First, connect a monitor.')
+  monitorName=choose('monitor',nil,'Place a monitor next to this computer.')
+  if not monitorName then return false end
+  monitor=peripheral.wrap(monitorName)
+  monitor.clear();monitor.setCursorPos(1,1);monitor.write('Mole Companion - monitor connected')
+  print('Monitor connected: '..monitorName)
+  print('Now connect a wireless/Ender modem.')
+  modemName=choose('modem',wireless,'Connect a wireless or Ender modem. A wired modem cannot contact turtles.')
+  if not modemName then return false end
+  rednet.open(modemName)
+  print('Modem connected. Station ID: '..os.getComputerID())
+  print('Pairing needs companion-ready Mole.');print('Use companion demo to preview.')
+  return true
+end
+if argv[1]=='help' then
+  print('companion       Open the station')
+  print('companion demo  Preview with fake data')
+  print('P: pair  Arrows: choose turtle')
+  print('D: discoveries  L: log  R: return')
+  print('Q: close (turtles keep working)');return
+end
+if argv[1] and argv[1]~='demo' then print('Use companion, companion demo, or companion help.');return end
+if not hardware() then return end
+local demo=argv[1]=='demo'
+if demo then
+  state=M.new({{id=21,name='Demo North',token='demo-only-token'},{id=22,name='Demo South',token='demo-only-token'}})
+  for i,id in ipairs(state.order) do
+    M.receive(state,id,{v=1,kind='status',session='demo',seq=1,token='demo-only-token',job='demo-job',phase=i==1 and 'Mining' or 'Waiting for fuel',y=18,depth=46,right=3,forward=7,fuel=1450,detail=i==2 and 'Refill the chest; use mole resume.' or nil},now())
+    M.receive(state,id,{v=1,kind='log',session='demo',seq=1,token='demo-only-token',text='DEMO: simulated turtle; no real commands.'},now())
+  end
+  M.receive(state,21,{v=1,kind='discovery',session='demo',seq=1,token='demo-only-token',job='demo-job',block='examplemod:tin_ore',name='Tin ore',count=8},now())
+end
+local scroll=0
+local mode='log';local note='';local pairing;local confirmReturn;local pairConfirm;local hits={}
+local function send(id,msg) if not demo then local ok,result=pcall(rednet.send,id,msg,PROTOCOL);return ok and result end;return false end
+local function selected() return state.turtles[state.order[state.selected]] end
+local function line(target,y,value,width)
+  target.setCursorPos(1,y);target.write((text(value,512) or ''):sub(1,width))
+end
+local function display(target,isMonitor)
+  local width,height=target.getSize();target.clear();hits={}
+  if width<18 or height<8 then
+    line(target,1,'Monitor too small.',width);if height>=2 then line(target,2,'Add monitor blocks.',width) end;return
+  end
+  local t=selected();local rows={demo and 'MOLE COMPANION - DEMO' or 'MOLE COMPANION'}
+  if pairing then
+    rows[#rows+1]='Pair a nearby turtle. On the turtle:'
+    rows[#rows+1]='mole pair '..os.getComputerID()..' '..pairing.code
+    rows[#rows+1]=pairConfirm and 'Reply from '..pairConfirm.id..': '..pairConfirm.name or 'Waiting for a modem reply...'
+    rows[#rows+1]=pairConfirm and 'Y: accept this turtle. Esc: cancel.' or 'Needs compatible Mole. Esc: cancel.'
+  elseif t then
+    rows[#rows+1]=state.selected..'/'..#state.order..' '..t.name..' (#'..t.id..')'
+    local age=t.lastSeen and math.max(0,math.floor(now()-t.lastSeen))
+    rows[#rows+1]=M.online(t,now()) and 'Connected - '..(t.status and t.status.phase or 'Awaiting status') or 'No recent contact - '..(age and age..'s ago' or 'no report yet')
+    if t.status then
+      local fresh=t.statusAt and now()-t.statusAt<=15
+      rows[#rows+1]=t.status.uncertain and 'Position uncertain; recovering.' or (fresh and 'Y ' or 'Last Y ')..t.status.y..' | Depth '..t.status.depth
+      rows[#rows+1]='Right '..t.status.right..' | Forward '..t.status.forward
+      rows[#rows+1]=(fresh and 'Fuel: ' or 'Last fuel: ')..t.status.fuel
+    end
+    if t.command then rows[#rows+1]='Return: '..t.command.result end
+  else rows[#rows+1]='No turtles paired. Press P to begin.';rows[#rows+1]='Pair a compatible Mole to begin.' end
+  local content={}
+  if t and not pairing then
+    if mode=='blocks' then
+      local ids={};for id in pairs(t.blocks) do ids[#ids+1]=id end;table.sort(ids)
+      for _,id in ipairs(ids) do local b=t.blocks[id];content[#content+1]=(b.name or id)..' x'..b.count;if b.name then content[#content+1]=id end end
+      if #content==0 then content={'No unfamiliar blocks reported.'} end
+    else
+      if t.status and t.status.detail then content[#content+1]=t.status.detail end
+      if t.status and t.status.progress then content[#content+1]=t.status.progress end
+      for _,entry in ipairs(t.logs) do content[#content+1]=entry end
+    end
+  end
+  local expanded={}
+  for _,v in ipairs(content) do for _,piece in ipairs(M.wrap(v,width)) do expanded[#expanded+1]=piece end end
+  local y=1
+  for _,v in ipairs(rows) do if y<=height-3 then line(target,y,v,width);y=y+1 end end
+  local available=height-2-y
+  scroll=math.min(scroll,math.max(0,#expanded-available))
+  local finish=math.max(0,#expanded-scroll)
+  local first=math.max(1,finish-available+1)
+  for i=first,finish do if y<height-2 then line(target,y,expanded[i],width);y=y+1 end end
+  line(target,height-2,confirmReturn and 'Return selected turtle? Y=yes Esc=no' or note,width)
+  line(target,height-1,'[Prev] [Next] [Return] [Pair]',width)
+  line(target,height,'D: blocks L: log Up/Down: scroll Q: exit',width)
+  if isMonitor then hits={prev={1,6,height-1},next={8,13,height-1},returnHome={15,22,height-1},pair={24,29,height-1}} end
+end
+local function render()
+  local ok=peripheral.isPresent(monitorName) and pcall(display,monitor,true)
+  if not ok then note='Monitor disconnected. Reattach it.' end
+  -- Monitor drawing never redirects the computer terminal.
+  display(term,false)
+  -- display(term) cleared hit positions; recreate from monitor dimensions.
+  if ok then local _,h=monitor.getSize();hits={prev={1,6,h-1},next={8,13,h-1},returnHome={15,22,h-1},pair={24,29,h-1}} end
+end
+local function pairStart()
+  if demo then note='Demo only. Exit to pair real turtles.';return end
+  pairing={code=tostring(math.random(100000,999999)),expires=now()+120};pairConfirm=nil;confirmReturn=nil
+  note='Pairing open for two minutes.'
+end
+local function action(which)
+  confirmReturn=nil;scroll=0
+  if which=='prev' and #state.order>0 then state.selected=(state.selected-2)%#state.order+1
+  elseif which=='next' and #state.order>0 then state.selected=state.selected%#state.order+1
+  elseif which=='pair' then pairStart()
+  elseif which=='returnHome' then
+    if demo then note='Demo: return commands are disabled.'
+    elseif selected() then confirmReturn=selected().id else note='Pair a turtle first.' end
+  end
+end
+if not demo then save() end
+local timer=os.startTimer(1);render()
+while true do
+  local event,a,b,c=os.pullEvent()
+  if event=='char' then
+    local key=a:lower()
+    if key=='q' then break
+    elseif key=='p' then pairStart()
+    elseif key=='d' then mode='blocks';scroll=0
+    elseif key=='l' then mode='log';scroll=0
+    elseif key=='r' then action('returnHome')
+    elseif key=='y' and pairing and pairConfirm then
+      print('Choose a name for this turtle.')
+      print('Current name: '..pairConfirm.name)
+      local name=question('Name (Enter keeps current):')
+      if name~='' then pairConfirm.name=text(name,32) end
+      local token=tostring(math.random(100000000,999999999))..'-'..tostring(os.epoch('utc'))
+      if M.repair(state,pairConfirm.id,pairConfirm.name,token) then
+        local packet={v=1,kind='paired',code=pairing.code,token=token,station=os.getComputerID()}
+        save();send(pairConfirm.id,packet)
+        state.turtles[pairConfirm.id].welcome={packet=packet,sent=now(),expires=now()+30}
+        note='Paired. Waiting for first status.'
+      else note='Already paired or station is full.' end
+      pairing=nil;pairConfirm=nil
+    elseif key=='y' and confirmReturn then
+      local packet,why=M.command(state,confirmReturn,now())
+      if packet then send(confirmReturn,packet);note='Return sent; waiting for acknowledgement.' else note=why end
+      confirmReturn=nil
+    end
+  elseif event=='key' then
+    if a==keys.left then action('prev') elseif a==keys.right or a==keys.tab then action('next')
+    elseif a==keys.up then scroll=scroll+3 elseif a==keys.down then scroll=math.max(0,scroll-3)
+    elseif a==keys.escape then pairing=nil;pairConfirm=nil;confirmReturn=nil;note='Cancelled.' end
+  elseif event=='monitor_touch' and a==monitorName then
+    for name,hit in pairs(hits) do if b>=hit[1] and b<=hit[2] and c==hit[3] then action(name);break end end
+  elseif event=='rednet_message' and c==PROTOCOL and not demo then
+    if pairing and now()<pairing.expires and type(b)=='table' and b.v==1 and b.kind=='pair_hello' and b.code==pairing.code and b.wireless==true and integer(a) and a>=0 then
+      if not pairConfirm then pairConfirm={id=a,name=text(b.name,32) or 'Turtle '..a} end
+    else M.receive(state,a,b,now()) end
+  elseif event=='timer' and a==timer then
+    if pairing and now()>=pairing.expires then pairing=nil;pairConfirm=nil;note='No completed pairing. Keep turtle nearby; press P to retry.' end
+    if peripheral.isPresent(monitorName) then monitor=peripheral.wrap(monitorName) end
+    if peripheral.isPresent(modemName) then pcall(rednet.open,modemName) end
+    M.tick(state,now(),send)
+    if demo then for _,id in ipairs(state.order) do state.turtles[id].lastSeen=now() end end
+    timer=os.startTimer(1)
+  elseif event=='peripheral' or event=='peripheral_detach' then
+    if peripheral.isPresent(monitorName) then monitor=peripheral.wrap(monitorName) end
+    if peripheral.isPresent(modemName) then pcall(rednet.open,modemName) else note='Modem disconnected. Reattach it.' end
+  end
+  render()
+end
+term.clear();term.setCursorPos(1,1);print('Companion closed. Turtles keep working.')
