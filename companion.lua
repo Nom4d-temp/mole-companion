@@ -1,7 +1,7 @@
--- Mole Companion v0.3.7 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.8 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.7'
+local VERSION='0.3.8'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -366,14 +366,18 @@ local function display(target,isMonitor)
   elseif t then
     rows[#rows+1]=state.selected..'/'..#state.order..' '..t.name..' (#'..t.id..')'
     local age=t.lastSeen and math.max(0,math.floor(now()-t.lastSeen))
-    rows[#rows+1]=t.awaitingMole and 'Paired - waiting for Mole to run' or M.online(t,now()) and 'Connected - '..(t.status and t.status.phase or 'Awaiting status') or 'No recent contact - '..(age and age..'s ago' or 'no report yet')
+    rows[#rows+1]=t.awaitingMole and 'Paired - waiting for Mole to run' or M.online(t,now()) and 'Connected' or 'No recent contact - '..(age and age..'s ago' or 'no report yet')
     if t.awaitingMole then rows[#rows+1]='Last connection check: '..(age or 0)..'s ago' end
     if t.status then
       local fresh=t.statusAt and now()-t.statusAt<=15
-      rows[#rows+1]=t.status.uncertain and 'Position uncertain; recovering.' or (fresh and 'Y ' or 'Last Y ')..t.status.y..' | Depth '..t.status.depth
-      rows[#rows+1]='Right '..t.status.right..' | Forward '..t.status.forward
-      rows[#rows+1]=(fresh and 'Fuel: ' or 'Last fuel: ')..t.status.fuel..(t.status.inventory and ' | Slots: '..t.status.inventory..'/16' or '')
+      rows[#rows+1]=(fresh and 'Activity: ' or 'Last activity: ')..t.status.phase
+      local prefix=fresh and 'Y ' or 'Last Y '
+      local position=prefix..t.status.y..' | Depth '..t.status.depth..' | Forward '..t.status.forward..' | Right '..t.status.right
+      if #position>width then position=prefix..t.status.y..' | D '..t.status.depth..' | F '..t.status.forward..' | R '..t.status.right end
+      rows[#rows+1]=position
+      if t.status.uncertain then rows[#rows+1]='Position uncertain; recovering.' end
       if t.status.progress then rows[#rows+1]=t.status.progress end
+      rows[#rows+1]=(fresh and 'Fuel: ' or 'Last fuel: ')..t.status.fuel..(t.status.inventory and ' | Slots: '..t.status.inventory..'/16' or '')
     end
     if t.command then rows[#rows+1]='Return: '..t.command.result end
   else

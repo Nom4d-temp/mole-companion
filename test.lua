@@ -228,3 +228,12 @@ check('unpair with no turtles gives a clear message',function()
  local r=application({},false,{},'unpair');assert(r.output:find('No paired turtles.',1,true) and r.writes==0)
 end)
 print('PASS: '..tests..' total companion checks')
+
+check('status separates connection and activity and groups coordinates',function()
+ application({function(rows)
+  assert(rows[3]=='Connected' and rows[4]=='Activity: Mining')
+  assert(rows[5]=='Y 18 | Depth 46 | Forward 7 | Right 3' or rows[5]=='Y 18 | D 46 | F 7 | R 3')
+  return {'char','q'}
+ end},true)
+end)
+print('PASS: '..tests..' total companion checks')
