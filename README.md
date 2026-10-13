@@ -39,6 +39,10 @@ Press Escape on the station to cancel pairing. If confirmation times out, keep t
 
 The companion does not automatically replace the computer's startup file. If you want it to open on boot, add `shell.run("companion", "start")` to your own startup program.
 
+## Multiple turtles
+
+One station and modem can monitor several turtles. Run `companion pair` for each turtle; earlier pairings are kept. Pairing closes back to the console, so run `companion start` afterward to receive updates again. Use **Prev/Next** or the left/right arrow keys to choose which turtle to display. While the display is running, Companion receives updates from every paired turtle, including those you are not currently viewing. Each turtle must have its own computer ID.
+
 ## Everyday controls
 
 | Key or command | Action |

@@ -253,3 +253,51 @@ check('fuel slots and tunnels share one status line',function()
  end},false,nil,'start',false,{})
 end)
 print('PASS: '..tests..' total companion checks')
+
+check('two turtles keep independent status logs discoveries and sessions',function()
+ local s=M.new({{id=4,name='Alpha',token='alpha-token'},{id=8,name='Beta',token='beta-token'}})
+ for seq=1,100 do
+  for _,id in ipairs({4,8}) do
+   local m=packet(nil,seq);m.token=s.turtles[id].token;m.y=id+seq;m.job='job-'..id
+   assert(M.receive(s,id,m,seq))
+   local log=packet('log',seq);log.token=m.token;log.text='Turtle '..id..' entry '..seq;assert(M.receive(s,id,log,seq))
+   local d=packet('discovery',seq);d.token=m.token;d.job=m.job;d.block='mod:ore'..id;d.count=seq;assert(M.receive(s,id,d,seq))
+  end
+ end
+ for _,id in ipairs({4,8}) do
+  local t=s.turtles[id];assert(t.status.y==id+100 and #t.logs==80 and t.blocks['mod:ore'..id].count==100)
+  assert(not t.blocks['mod:ore'..(id==4 and 8 or 4)])
+ end
+ local m=packet();m.token='alpha-token';m.session='new-boot';m.job='job-4';assert(M.receive(s,4,m,101))
+ assert(s.turtles[8].session=='boot-a' and s.turtles[8].sequences.status==100)
+ local restored=M.new(M.pairs(s));assert(#restored.order==2 and restored.turtles[4].token=='alpha-token' and restored.turtles[8].token=='beta-token')
+end)
+check('display receives unselected turtle updates and targets selected return',function()
+ local function report(id,seq,y)
+  local m=packet(nil,seq);m.token=id==4 and 'alpha-token' or 'beta-token';m.y=y;m.job='job-'..id
+  return {'rednet_message',id,m,M.protocol}
+ end
+ application({report(4,1,40),report(8,1,80),{'key',2},report(4,2,41),function(rows)
+  assert(rows[2]:find('Beta',1,true) and rows[4]:find('Y 80',1,true))
+  return {'key',1}
+ end,function(rows)
+  assert(rows[2]:find('Alpha',1,true) and rows[4]:find('Y 41',1,true))
+  return {'char','r'}
+ end,{'char','y'},function(_,packets)
+  local m=packets[#packets];assert(m.kind=='command' and m.token=='alpha-token')
+  return {'char','q'}
+ end},false,nil,'start',false,{})
+end)
+check('pairing another turtle preserves existing station pairings',function()
+ local pin
+ local r=application({function(rows)
+  pin=assert(rows[4]:match('^PAIRING CODE: (%d+)$'))
+  return {'rednet_message',21,{v=1,kind='pair_hello',code=pin,wireless=true,name='Gamma'},M.protocol}
+ end,{'char','y'},function(_,packets)
+  local p=packets[#packets];assert(p.kind=='paired')
+  return {'rednet_message',21,{v=1,kind='pair_ready',code=pin,token=p.token},M.protocol}
+ end},false,nil,'pair',false,{'Gamma'})
+ assert(#r.config.pairs==3 and r.config.pairs[1].id==4 and r.config.pairs[1].token=='alpha-token' and r.config.pairs[2].id==8 and r.config.pairs[2].token=='beta-token' and r.config.pairs[3].id==21)
+ assert(r.output:find("Use 'companion start'",1,true))
+end)
+print('PASS: '..tests..' total companion checks')
