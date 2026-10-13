@@ -41,7 +41,7 @@ The companion does not automatically replace the computer's startup file. If you
 
 ## Multiple turtles
 
-One station and modem can monitor several turtles. Run `companion pair` for each turtle; earlier pairings are kept. Pairing closes back to the console, so run `companion start` afterward to receive updates again. Use **Prev/Next** or the left/right arrow keys to choose which turtle to display. While the display is running, Companion receives updates from every paired turtle, including those you are not currently viewing. Each turtle must have its own computer ID.
+One station and modem can monitor **up to 32 paired turtles**. Run `companion pair` for each turtle; earlier pairings are kept. Pairing closes back to the console, so run `companion start` afterward to receive updates again. Use **Prev/Next** or the left/right arrow keys to choose which turtle to display. While the display is running, Companion receives updates from every paired turtle, including those you are not currently viewing. Each turtle must have its own computer ID.
 
 ## Everyday controls
 
