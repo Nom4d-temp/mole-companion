@@ -45,7 +45,11 @@ One station and modem can monitor **up to 32 paired turtles**. Run `companion pa
 
 ## Everyday controls
 
-| Key or command | Action |
+### Console commands
+
+Type these at the computer's command prompt.
+
+| Command | Action |
 | --- | --- |
 | `companion` | Show the command overview |
 | `companion start` | Open turtle status and activity display |
@@ -55,6 +59,15 @@ One station and modem can monitor **up to 32 paired turtles**. Run `companion pa
 | `companion update` | Update the program, keeping pairings and settings |
 | `companion unpair` | Choose a turtle and remove its station pairing |
 | `companion remove` | Fully delete the program and station data after confirmation |
+
+To unpair, choose a turtle by name and computer ID, then confirm with `yes`. Other pairings are kept. To clear the turtle's saved station too, use option **2** in `mole companion` on that turtle.
+
+### Status display controls
+
+Use these while the status display is open.
+
+| Key | Action |
+| --- | --- |
 | Left / Right / Tab | Select a turtle |
 | R, then Y | Ask the selected turtle to return home |
 | D | Show unfamiliar block discoveries |
@@ -70,9 +83,9 @@ The monitor automatically uses the smallest text scale (0.5). A compact layout s
 
 ## What the station tells you
 
-- Current job state, fuel, world Y, depth, and distance right/forward from the starting chest. This is Mole's tracked position, not GPS. During recovery it is labelled uncertain.
+- Current job state, fuel, occupied inventory slots (out of 16), tunnel progress, world Y, depth, and distance right/forward from the starting chest. This is Mole's tracked position, not GPS. During recovery it is labelled uncertain.
 - Recent Mole messages, wrapped for your monitor. This is a Mole activity log, not a complete remote CraftOS terminal or keyboard.
-- Each unfamiliar block's ID, optional readable name, and count reported by the turtle. Discoveries do not change mining decisions.
+- Each unfamiliar block's ID, optional readable name, and count reported by the turtle. The activity log shows the unfamiliar-block label and ID together when mining starts; long entries wrap to fit the screen.
 - Return request state: sent, accepted, completed, rejected, or unconfirmed. “Sent” alone does not mean the turtle received it. An unconfirmed request is not left queued indefinitely for a later reconnection.
 - Time since the last message when contact is lost. Last-known data remains visible; it is not live position.
 
@@ -91,29 +104,6 @@ The companion retains 80 recent messages and up to 128 distinct discoveries per 
 
 Pairing prevents accidental control of the wrong turtle, but Rednet is not encrypted or authenticated against other players. This first version is for trusted worlds/servers. Do not treat its pairing code/token as protection against a malicious player.
 
-## Update or remove
-
-Run `companion update` to install the latest program while keeping turtle pairings, names, and settings. No old program backup is kept. Failed or invalid downloads leave the current installation intact.
-
-Run `companion remove`, then type `yes`, to delete the program and all its saved data without a backup. Any other answer cancels. If your own startup program launches Companion, remove that launch line yourself; unrelated startup files are kept.
-
-These commands work without a monitor or modem and do not change the turtles or their quarry jobs. After unpairing or removal, a turtle may still report to its former station; re-pair it or disable reporting with `mole companion`.
-
 ## AI disclosure
 
-Mole Companion was generated with OpenAI's ChatGPT from human requirements and checked with simulated CC:Tweaked tests. Minecraft testing is still needed, especially for wireless range and real modem behavior.
-
-The status display shows fuel and occupied inventory slots (out of 16). When Mole starts mining an unfamiliar block, the unfamiliar-block label and block ID appear together in one activity entry. Long entries wrap to fit the screen.
-
-Run `companion unpair` to choose a turtle by name and computer ID, then confirm with `yes`. Other pairings are kept. To clear the turtle’s saved station too, use option **2** in `mole companion` on that turtle.
-
-**Upgrading from 0.3.6 or earlier:** the old updater still clears pairings. To keep them for this upgrade, close the display and download the new program first:
-```
-wget https://raw.githubusercontent.com/Nom4d-temp/mole-companion/main/companion.lua companion-new
-```
-Only after the download succeeds, replace the program:
-```
-delete companion
-move companion-new companion
-```
-Future updates can use `companion update` and will keep pairings.
+Mole Companion was created with OpenAI's ChatGPT, guided by human ideas, requirements, and feedback.
