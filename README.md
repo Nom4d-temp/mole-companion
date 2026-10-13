@@ -1,4 +1,4 @@
-# Mole Companion 0.3.11
+# Mole Companion 0.3.12
 
 **Keep an eye on your Moles from one place.** Mole Companion turns a CC:Tweaked computer and monitor into a station for watching multiple mining turtles. Choose a turtle to see its status, recent Mole output, and unfamiliar blocks it has mined, or ask it to return home.
 
@@ -11,7 +11,7 @@ Use **Mole 1.6.1 or newer** on your turtles. Wireless support stays optional; en
 - A wireless modem or Ender modem connected to the computer.
 - Each turtle needs its pickaxe, a wireless or Ender modem, and Mole 1.6.1 or newer.
 
-Ordinary wireless modems have limited range. Deep mining may lose contact with a surface station. Ender modems remove that distance limit. The station and turtle still need their chunks loaded; this program does not load chunks.
+Ordinary wireless modems have limited range. A turtle can lose contact as it mines deeper or farther from the station, even when its chunks are force-loaded. Companion shows **No recent contact** and a possible range warning; updates resume automatically when contact returns. Missing reports can also mean Mole has stopped, a modem is missing, or a chunk has unloaded. Ender modems remove that distance limit. The station and turtle still need their chunks loaded; this program does not load chunks.
 
 ## Download and start
 

@@ -35,7 +35,7 @@ print('PASS: '..tests..' companion protocol/state tests')
 
 -- Full application smoke tests: no Minecraft required. Render on 39x12 surfaces.
 local function application(events,demo,hardwareNames,command,smallMonitor,unpairCase)
-  local env=setmetatable({},{__index=_G});local files={};local saved={};local writes=0;local redraws=0;local timer=0;local packets={}
+  local env=setmetatable({},{__index=_G});local files={};local saved={};local writes=0;local redraws=0;local timer=0;local appClock=10000;local packets={}
   local function surface(small)
     local w,h=small and 7 or 39,small and 5 or 12
     local rows={};local y=1
@@ -57,8 +57,8 @@ local function application(events,demo,hardwareNames,command,smallMonitor,unpair
     isPresent=function(n) return n~='monitor' or present end}
   env.rednet={open=function() end,send=function(id,msg) if msg.kind=='paired' or msg.kind=='pair_verified' or msg.kind=='pong' or msg.kind=='command' and not demo then packets[#packets+1]=msg;return true end;error('Demo or unpaired station sent a turtle command') end}
   env.keys={left=1,right=2,tab=3,escape=4,up=5,down=6}
-  env.os={epoch=function() return 10000 end,getComputerID=function() return 7 end,startTimer=function() timer=timer+1;return timer end,
-    pullEvent=function() local e=table.remove(events,1);assert(e,'App did not close');if type(e)=='function' then e=e(getRows(),packets) end;if e[1]=='detach' then present=false;return 'peripheral_detach','monitor' end;return table.unpack(e) end}
+  env.os={epoch=function() return appClock end,getComputerID=function() return 7 end,startTimer=function() timer=timer+1;return timer end,
+    pullEvent=function() local e=table.remove(events,1);assert(e,'App did not close');if type(e)=='function' then e=e(getRows(),packets) end;if e[1]=='advance' then appClock=appClock+e[2]*1000;return 'timer',timer end;if e[1]=='detach' then present=false;return 'peripheral_detach','monitor' end;return table.unpack(e) end}
   local output={};env.print=function(v) output[#output+1]=v end;env.write=function() end;env.read=function() return unpairCase and table.remove(unpairCase,1) or 'q' end
   local argument=command or (demo and 'demo' or 'start')
   if command=='overview' then argument=nil end
@@ -299,5 +299,25 @@ check('pairing another turtle preserves existing station pairings',function()
  end},false,nil,'pair',false,{'Gamma'})
  assert(#r.config.pairs==3 and r.config.pairs[1].id==4 and r.config.pairs[1].token=='alpha-token' and r.config.pairs[2].id==8 and r.config.pairs[2].token=='beta-token' and r.config.pairs[3].id==21)
  assert(r.output:find("Use 'companion start'",1,true))
+end)
+print('PASS: '..tests..' total companion checks')
+
+check('lost-contact warning clears when reports resume',function()
+ local function report(seq)
+  local m=packet(nil,seq);m.token='alpha-token';return {'rednet_message',4,m,M.protocol}
+ end
+ application({report(1),{'advance',20},function(rows)
+  local screen=table.concat(rows,'\n');assert(screen:find('No contact',1,true) and screen:find('Possibly out of range.',1,true) and screen:find('Updates resume when contact returns.',1,true))
+  return report(2)
+ end,function(rows)
+  local screen=table.concat(rows,'\n');assert(screen:find('Connected | Activity: Mining',1,true) and not screen:find('out of range',1,true))
+  return {'char','q'}
+ end},false,nil,'start',false,{})
+end)
+check('small monitor shows and clears possible range warning',function()
+ local function report(seq) local m=packet(nil,seq);m.token='alpha-token';return {'rednet_message',4,m,M.protocol} end
+ application({report(1),{'advance',20},function(rows)
+  assert(rows[6]=='Out of range?' and rows[7]=='Auto-resumes');return report(2)
+ end,function(rows) assert(not table.concat(rows,'\n'):find('Out of range?',1,true));return {'char','q'} end},false,nil,'start',true,{})
 end)
 print('PASS: '..tests..' total companion checks')

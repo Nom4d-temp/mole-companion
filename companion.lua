@@ -1,7 +1,7 @@
--- Mole Companion v0.3.11 - optional CC:Tweaked monitoring station.
+-- Mole Companion v0.3.12 - optional CC:Tweaked monitoring station.
 -- Optional station for Mole 1.6.0+. No turtle is modified here.
 local argv={...}
-local VERSION='0.3.11'
+local VERSION='0.3.12'
 local PROTOCOL='mole-companion/1'
 local M={protocol=PROTOCOL}
 local function text(v,limit)
@@ -334,6 +334,7 @@ local function display(target,isMonitor)
         rows[#rows+1]='Fuel '..t.status.fuel
         if t.status.inventory then rows[#rows+1]='Slots '..t.status.inventory..'/16' end
       end
+      if not t.awaitingMole and not M.online(t,now()) then rows[#rows+1]='Out of range?';rows[#rows+1]='Auto-resumes' end
       if t.command then rows[#rows+1]='Return '..t.command.result end
       local content={}
       if mode=='blocks' then
@@ -381,6 +382,10 @@ local function display(target,isMonitor)
       local resources=(fresh and 'Fuel: ' or 'Last fuel: ')..t.status.fuel..(t.status.inventory and ' | Slots: '..t.status.inventory..'/16' or '')..(t.status.progress and ' | '..t.status.progress or '')
       if #resources>width then resources=(fresh and 'Fuel ' or 'Last fuel ')..t.status.fuel..(t.status.inventory and ' S '..t.status.inventory..'/16' or '')..(t.status.progress and ' '..t.status.progress:gsub('Tunnels: ','T ') or '') end
       rows[#rows+1]=resources
+    end
+    if not t.awaitingMole and not M.online(t,now()) then
+      rows[#rows+1]='Possibly out of range.'
+      for _,part in ipairs(M.wrap('Updates resume when contact returns.',width)) do rows[#rows+1]=part end
     end
     if t.command then rows[#rows+1]='Return: '..t.command.result end
   else
